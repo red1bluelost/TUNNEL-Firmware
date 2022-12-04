@@ -7,6 +7,7 @@ use rtic::app;
 
 #[app(device = hal::pac, peripherals = true, dispatchers = [SPI1])]
 mod app {
+    use rtic::app; // here for CLion to detect the name
     use stm32f4xx_hal as hal;
 
     use rtt_target::{rprintln, rtt_init_print};

@@ -3,14 +3,12 @@
 #![no_std]
 
 use panic_rtt_target as _;
-use rtic::app;
 
-#[app(device = hal::pac, peripherals = true, dispatchers = [SPI1])]
+#[rtic::app(device = hal::pac, peripherals = true, dispatchers = [SPI1])]
 mod app {
-    use rtic::app; // here for CLion to detect the name
-    use stm32f4xx_hal as hal;
-
+    use cortex_m_semihosting::{debug, hprintln};
     use rtt_target::{rprintln, rtt_init_print};
+    use stm32f4xx_hal as hal;
     use systick_monotonic::Systick;
 
     #[shared]
@@ -28,6 +26,12 @@ mod app {
         rprintln!("init");
 
         let mono = Systick::new(ctx.core.SYST, 48_000_000);
+
+        hprintln!("Hello, world!");
+
+        // exit QEMU
+        // NOTE do not run this on hardware; it can corrupt OpenOCD state
+        debug::exit(debug::EXIT_SUCCESS);
 
         (Shared {}, Local {}, init::Monotonics(mono))
     }

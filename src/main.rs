@@ -10,7 +10,14 @@ use panic_halt as _;
 #[cfg(feature = "QEMU")]
 use panic_semihosting as _;
 
-#[rtic::app(device = hal::pac, peripherals = true, dispatchers = [SPI1])]
+mod plm01a1;
+mod st7580;
+
+#[rtic::app(
+    device = hal::pac,
+    peripherals = true,
+    dispatchers = [SPI1]
+)]
 mod app {
     #[cfg(feature = "QEMU")]
     use cortex_m_semihosting::{debug, hprintln};
@@ -26,13 +33,14 @@ mod app {
     use stm32f4xx_hal as hal;
     use usb_device::prelude::*;
 
+    use crate::plm01a1;
+
     #[shared]
     struct Shared {}
 
     #[local]
     struct Local {
         usb_dev: UsbDevice<'static, UsbBusType>,
-        led_on_board: ErasedPin<Output>,
     }
 
     #[monotonic(binds = TIM2, default = true)]
@@ -63,6 +71,18 @@ mod app {
         let mono = dp.TIM2.monotonic_us(&clocks);
 
         let gpioa = dp.GPIOA.split();
+        let gpioc = dp.GPIOC.split();
+
+        let plm = plm01a1::PLM::new(
+            gpioa.pa5.into_push_pull_output(),
+            gpioa.pa8.into_push_pull_output(),
+            gpioc.pc0.into_input(),
+            gpioc.pc1.into_input(),
+            dp.USART1,
+            gpioa.pa9.into_alternate(),
+            gpioa.pa10.into_alternate(),
+            &clocks,
+        );
 
         let usb = USB {
             usb_global: dp.OTG_FS_GLOBAL,
@@ -73,7 +93,9 @@ mod app {
             hclk: clocks.hclk(),
         };
 
-        static mut USB_BUS: Option<usb_device::bus::UsbBusAllocator<UsbBusType>> = None;
+        static mut USB_BUS: Option<
+            usb_device::bus::UsbBusAllocator<UsbBusType>,
+        > = None;
         unsafe { USB_BUS.replace(UsbBus::new(usb, &mut EP_MEMORY)) };
 
         let usb_dev = UsbDeviceBuilder::new(
@@ -91,19 +113,9 @@ mod app {
         #[cfg(feature = "QEMU")]
         debug::exit(debug::EXIT_SUCCESS);
 
-        let led_on_board = gpioa.pa5.into_push_pull_output().into();
-        blink::spawn_after(1.secs()).unwrap();
-
         #[cfg(feature = "RTT")]
         rprintln!("init end");
-        (
-            Shared {},
-            Local {
-                usb_dev,
-                led_on_board,
-            },
-            init::Monotonics(mono),
-        )
+        (Shared {}, Local { usb_dev }, init::Monotonics(mono))
     }
 
     #[idle(local = [usb_dev])]
@@ -114,17 +126,5 @@ mod app {
                 rprintln!("usb!");
             }
         }
-    }
-
-    /// This task is just an indicator that the board works.
-    #[task(local = [led_on_board])]
-    fn blink(ctx: blink::Context) {
-        let led = ctx.local.led_on_board;
-        if led.is_set_low() {
-            led.set_high();
-        } else {
-            led.set_low();
-        }
-        blink::spawn_after(1.secs()).unwrap();
     }
 }

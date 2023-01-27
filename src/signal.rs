@@ -2,6 +2,8 @@ pub struct Signal {
     inner: core::cell::RefCell<bool>,
 }
 
+unsafe impl Sync for Signal {}
+
 /// I recognizes that this is bad, not good, and very uncool. I don't have time
 /// to decipher the gross C code I'm attempting to port. As such, this hack
 /// will remain until I have the time, patiences, and courage to do it better.

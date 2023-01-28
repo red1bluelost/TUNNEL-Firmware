@@ -17,6 +17,10 @@ pub struct InterruptHandler {
     rx_cksum: u16,
     rx_frame: Frame,
 
+    ind_frame_queue: globals::FrameProducer<{ globals::QUEUE_SIZE }>,
+    cnf_frame_queue: globals::FrameProducer<2>,
+    tx_frame_queue: globals::FrameConsumer<2>,
+
     ack_tx_value: Option<u8>,
 
     tx_state: TxIrqStatus,
@@ -29,12 +33,18 @@ impl InterruptHandler {
         unsafe { globals::SERIAL_PLM.as_mut() }
             .unwrap()
             .listen(Event::Rxne);
+        let ind_frame_queue = unsafe { globals::FRAME_QUEUE.split().0 };
+        let cnf_frame_queue = unsafe { globals::CONFIRM_FRAME.split().0 };
+        let tx_frame_queue = unsafe { globals::CONFIRM_FRAME.split().1 };
         Self {
             ic_timeout: Default::default(),
             rx_state: RxIrqStatus::FirstByte,
             rx_cur_idx: 0,
             rx_cksum: 0,
             rx_frame: Default::default(),
+            ind_frame_queue,
+            cnf_frame_queue,
+            tx_frame_queue,
             ack_tx_value: None,
             tx_state: TxIrqStatus::SendStx,
             tx_cur_idx: 0,
@@ -122,11 +132,11 @@ impl InterruptHandler {
                 self.rx_frame.checksum |= (c as u16) << 8;
                 if self.rx_frame.checksum == self.rx_cksum {
                     if self.rx_frame.command.is_indication() {
-                        unsafe { globals::FRAME_QUEUE.borrow_mut() }
+                        self.ind_frame_queue
                             .enqueue(self.rx_frame.clone())
                             .unwrap();
                     } else {
-                        unsafe { globals::CONFIRM_FRAME.borrow_mut() }
+                        self.cnf_frame_queue
                             .enqueue(self.rx_frame.clone())
                             .unwrap();
                     }
@@ -151,9 +161,7 @@ impl InterruptHandler {
 
         match self.tx_state {
             TxIrqStatus::SendStx => {
-                self.tx_frame = unsafe { globals::TX_FRAME.borrow_mut() }
-                    .dequeue()
-                    .unwrap();
+                self.tx_frame = self.tx_frame_queue.dequeue().unwrap();
                 serial.write(self.tx_frame.stx).unwrap();
                 self.tx_state = TxIrqStatus::SendLength;
             }

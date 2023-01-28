@@ -33,6 +33,7 @@ pub fn split(
     usart_tx: PA9<Alternate<7>>,
     usart_rx: PA10<Alternate<7>>,
     tim3: pac::TIM3,
+    tim5: pac::TIM5,
     clocks: &rcc::Clocks,
 ) -> (Driver, InterruptHandler) {
     let t_req = t_req.internal_resistor(Pull::None).speed(Speed::High);
@@ -60,7 +61,7 @@ pub fn split(
 
     let isr = InterruptHandler::new();
 
-    let driver = Driver::new(resetn);
+    let driver = Driver::new(resetn, tim5, clocks);
 
     (driver, isr)
 }

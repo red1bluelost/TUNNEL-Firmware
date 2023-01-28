@@ -1,5 +1,8 @@
 #![no_main]
 #![no_std]
+// TEMPORARY
+#![allow(dead_code)]
+#![allow(unused)]
 
 #[cfg(feature = "RTT")]
 use panic_rtt_target as _;
@@ -11,6 +14,7 @@ use panic_halt as _;
 use panic_semihosting as _;
 
 mod plm01a1;
+mod signal;
 mod st7580;
 
 #[rtic::app(
@@ -26,6 +30,7 @@ mod app {
         otg_fs::{UsbBus, UsbBusType, USB},
         pac,
         prelude::*,
+        serial::Serial1,
         timer,
     };
     #[cfg(feature = "RTT")]
@@ -81,6 +86,7 @@ mod app {
             dp.USART1,
             gpioa.pa9.into_alternate(),
             gpioa.pa10.into_alternate(),
+            dp.TIM5,
             &clocks,
         );
 
@@ -127,4 +133,7 @@ mod app {
             }
         }
     }
+
+    #[task(binds = USART1,  local = [])]
+    fn usart1(ctx: usart1::Context) {}
 }

@@ -510,6 +510,7 @@ dependencies = [
  "cortex-m-rtic",
  "cortex-m-semihosting",
  "heapless",
+ "nb 1.0.0",
  "panic-halt",
  "panic-rtt-target",
  "panic-semihosting",

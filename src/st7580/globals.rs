@@ -20,6 +20,9 @@ pub static mut SERIAL_PLM: SerialPlm = None;
 pub static mut T_REQ_PIN: Option<PA5<Output<PushPull>>> = None;
 
 pub static mut COUNTER: Option<CounterMs<pac::TIM3>> = None;
+pub fn now() -> u32 {
+    unsafe { COUNTER.as_ref() }.unwrap().now().ticks()
+}
 
 pub static STATUS_VALUE: Q2<u8> = Q2::new();
 pub static ACK_RX_VALUE: Q2<u8> = Q2::new();

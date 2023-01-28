@@ -44,3 +44,32 @@ pub enum RxIrqStatus {
     ChecksumLsb,
     ChecksumMsb,
 }
+
+#[derive(Default, Debug, Clone, Copy)]
+pub struct Timeout {
+    tmo: u32,
+    tmo_start_time: u32,
+}
+
+impl Timeout {
+    pub fn is_expired(&self) -> bool {
+        let now = super::globals::now();
+        let Timeout {
+            tmo,
+            tmo_start_time,
+        } = *self;
+        let elapse = if now >= tmo_start_time {
+            now - tmo_start_time
+        } else {
+            now + (u32::MAX - tmo_start_time)
+        };
+        elapse >= tmo
+    }
+
+    pub fn set(&mut self, tmo: u32) {
+        *self = Timeout {
+            tmo,
+            tmo_start_time: super::globals::now(),
+        };
+    }
+}

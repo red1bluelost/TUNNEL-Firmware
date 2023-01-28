@@ -47,6 +47,7 @@ mod app {
     struct Local {
         usb_dev: UsbDevice<'static, UsbBusType>,
         st7580_interrupt_handler: st7580::InterruptHandler,
+        st7580_driver: st7580::Driver,
     }
 
     #[monotonic(binds = TIM2, default = true)]
@@ -79,8 +80,9 @@ mod app {
         let gpioa = dp.GPIOA.split();
         let gpioc = dp.GPIOC.split();
 
-        let (_, st7580_interrupt_handler) = st7580::split(
+        let (st7580_driver, st7580_interrupt_handler) = st7580::split(
             gpioa.pa5.into_push_pull_output(),
+            gpioa.pa8.into_push_pull_output(),
             dp.USART1,
             gpioa.pa9.into_alternate(),
             gpioa.pa10.into_alternate(),
@@ -124,6 +126,7 @@ mod app {
             Local {
                 usb_dev,
                 st7580_interrupt_handler,
+                st7580_driver,
             },
             init::Monotonics(mono),
         )

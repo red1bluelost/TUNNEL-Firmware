@@ -6,10 +6,7 @@ use core::borrow::BorrowMut;
 use cortex_m::prelude::*;
 use hal::{
     gpio::*,
-    pac, rcc,
-    serial::{config, Event, RxISR, Serial, Serial1, TxISR},
-    time,
-    timer::{CounterMs, Delay, ExtU32, TimerExt},
+    serial::{Event, RxISR, Serial1, TxISR},
 };
 use stm32f4xx_hal as hal;
 
@@ -29,13 +26,16 @@ pub struct InterruptHandler {
 
 impl InterruptHandler {
     pub(super) fn new() -> Self {
+        unsafe { globals::SERIAL_PLM.as_mut() }
+            .unwrap()
+            .listen(Event::Rxne);
         Self {
             ic_timeout: Default::default(),
             rx_state: RxIrqStatus::FirstByte,
             rx_cur_idx: 0,
             rx_cksum: 0,
             rx_frame: Default::default(),
-            ack_tx_value: false,
+            ack_tx_value: None,
             tx_state: TxIrqStatus::SendStx,
             tx_cur_idx: 0,
             tx_frame: Default::default(),
@@ -197,7 +197,7 @@ impl InterruptHandler {
     }
 
     pub fn handle(&mut self) {
-        let serial = unsafe { globals::SERIAL_PLM.as_mut().unwrap() };
+        let serial = unsafe { globals::SERIAL_PLM.as_mut() }.unwrap();
 
         if serial.is_rx_not_empty() {
             self.rx(serial);

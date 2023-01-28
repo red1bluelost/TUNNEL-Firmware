@@ -28,6 +28,7 @@ pub use isr::*;
 
 pub fn split(
     t_req: PA5<Output<PushPull>>,
+    resetn: PA8<Output<PushPull>>,
     usart: pac::USART1,
     usart_tx: PA9<Alternate<7>>,
     usart_rx: PA10<Alternate<7>>,
@@ -59,5 +60,7 @@ pub fn split(
 
     let isr = InterruptHandler::new();
 
-    (todo!(), isr)
+    let driver = Driver::new(resetn);
+
+    (driver, isr)
 }

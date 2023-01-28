@@ -8,7 +8,9 @@ mod types;
 use core::borrow::{Borrow, BorrowMut};
 
 use constants::*;
-use cortex_m::prelude::_embedded_hal_serial_Read;
+use cortex_m::prelude::{
+    _embedded_hal_serial_Read, _embedded_hal_serial_Write,
+};
 use hal::{
     gpio::*,
     pac, rcc,
@@ -93,12 +95,16 @@ impl Timeout {
 }
 
 pub fn split(
+    t_req: PA5<Output<PushPull>>,
     usart: pac::USART1,
     usart_tx: PA9<Alternate<7>>,
     usart_rx: PA10<Alternate<7>>,
     tim3: pac::TIM3,
     clocks: &rcc::Clocks,
 ) -> ((), InterruptHandler) {
+    let t_req = t_req.internal_resistor(Pull::None).speed(Speed::High);
+    unsafe { globals::T_REQ_PIN.replace(t_req) };
+
     let serial_plm = Serial::new(
         usart,
         (
@@ -136,6 +142,8 @@ pub struct InterruptHandler {
     ack_tx_value: Option<u8>,
 
     tx_state: TxIrqStatus,
+    tx_cur_idx: u8,
+    tx_frame: Frame,
 }
 
 impl InterruptHandler {
@@ -241,6 +249,56 @@ impl InterruptHandler {
         &mut self,
         serial: &mut Serial1<(PA9<Alternate<7>>, PA10<Alternate<7>>), u8>,
     ) {
+        if let Some(ack_tx) = self.ack_tx_value {
+            serial.write(ack_tx).unwrap();
+            self.tx_state = TxIrqStatus::TxDone;
+        }
+
+        match self.tx_state {
+            TxIrqStatus::SendStx => {
+                self.tx_frame = unsafe { globals::TX_FRAME.borrow_mut() }
+                    .dequeue()
+                    .unwrap();
+                serial.write(self.tx_frame.stx).unwrap();
+                self.tx_state = TxIrqStatus::SendLength;
+            }
+            TxIrqStatus::SendLength => {
+                unsafe { globals::T_REQ_PIN.as_mut() }.unwrap().set_high();
+                serial.write(self.tx_frame.length).unwrap();
+                self.tx_state = TxIrqStatus::SendCommand;
+            }
+            TxIrqStatus::SendCommand => {
+                serial.write(self.tx_frame.command).unwrap();
+                self.tx_state = TxIrqStatus::SendData;
+            }
+            TxIrqStatus::SendData => {
+                serial
+                    .write(self.tx_frame.data[self.tx_cur_idx as usize])
+                    .unwrap();
+                self.tx_cur_idx += 1;
+                if self.tx_frame.length == self.tx_cur_idx {
+                    self.tx_state = TxIrqStatus::SendChecksumLsb;
+                }
+            }
+            TxIrqStatus::SendChecksumLsb => {
+                serial.write((self.tx_frame.checksum & 0xff) as u8).unwrap();
+                self.tx_state = TxIrqStatus::SendChecksumMsb;
+            }
+            TxIrqStatus::SendChecksumMsb => {
+                serial.write((self.tx_frame.checksum >> 8) as u8).unwrap();
+                self.tx_state = TxIrqStatus::TxDone;
+            }
+            TxIrqStatus::TxDone => {
+                serial.unlisten(Event::Txe);
+                if self.ack_tx_value.is_some() {
+                    self.ack_tx_value = None;
+                } else {
+                    globals::LOCAL_FRAME_TX.check();
+                }
+                self.tx_state = TxIrqStatus::SendStx;
+                self.tx_cur_idx = 0;
+            }
+        }
     }
 
     pub fn handle(&mut self) {

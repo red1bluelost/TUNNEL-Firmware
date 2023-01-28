@@ -38,7 +38,7 @@ mod app {
     use stm32f4xx_hal as hal;
     use usb_device::prelude::*;
 
-    use crate::plm01a1;
+    use crate::{plm01a1, st7580};
 
     #[shared]
     struct Shared {}
@@ -46,6 +46,7 @@ mod app {
     #[local]
     struct Local {
         usb_dev: UsbDevice<'static, UsbBusType>,
+        st7580_interrupt_handler: st7580::InterruptHandler,
     }
 
     #[monotonic(binds = TIM2, default = true)]
@@ -78,15 +79,12 @@ mod app {
         let gpioa = dp.GPIOA.split();
         let gpioc = dp.GPIOC.split();
 
-        let plm = plm01a1::PLM::new(
+        let (_, st7580_interrupt_handler) = st7580::split(
             gpioa.pa5.into_push_pull_output(),
-            gpioa.pa8.into_push_pull_output(),
-            gpioc.pc0.into_input(),
-            gpioc.pc1.into_input(),
             dp.USART1,
             gpioa.pa9.into_alternate(),
             gpioa.pa10.into_alternate(),
-            dp.TIM5,
+            dp.TIM3,
             &clocks,
         );
 
@@ -121,7 +119,14 @@ mod app {
 
         #[cfg(feature = "RTT")]
         rprintln!("init end");
-        (Shared {}, Local { usb_dev }, init::Monotonics(mono))
+        (
+            Shared {},
+            Local {
+                usb_dev,
+                st7580_interrupt_handler,
+            },
+            init::Monotonics(mono),
+        )
     }
 
     #[idle(local = [usb_dev])]
@@ -134,6 +139,8 @@ mod app {
         }
     }
 
-    #[task(binds = USART1,  local = [])]
-    fn usart1(ctx: usart1::Context) {}
+    #[task(binds = USART1,  local = [st7580_interrupt_handler])]
+    fn usart1(ctx: usart1::Context) {
+        ctx.local.st7580_interrupt_handler.handle();
+    }
 }

@@ -1,7 +1,4 @@
-use super::constants::*;
-use super::frame::*;
-use super::globals;
-use super::types::*;
+use super::{constants::*, frame::*, globals, types::*};
 use core::borrow::BorrowMut;
 use cortex_m::prelude::*;
 use hal::{

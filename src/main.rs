@@ -23,6 +23,10 @@ mod st7580;
     dispatchers = [SPI1]
 )]
 mod app {
+    use crate::{
+        plm01a1,
+        st7580::{self, driver},
+    };
     #[cfg(feature = "QEMU")]
     use cortex_m_semihosting::{debug, hprintln};
     use hal::{
@@ -37,8 +41,6 @@ mod app {
     use rtt_target::{rprintln, rtt_init_print};
     use stm32f4xx_hal as hal;
     use usb_device::prelude::*;
-
-    use crate::{plm01a1, st7580};
 
     #[shared]
     struct Shared {}
@@ -87,6 +89,7 @@ mod app {
             gpioa.pa9.into_alternate(),
             gpioa.pa10.into_alternate(),
             dp.TIM3,
+            dp.TIM5,
             &clocks,
         );
 
@@ -119,6 +122,8 @@ mod app {
         #[cfg(feature = "QEMU")]
         debug::exit(debug::EXIT_SUCCESS);
 
+        plm::spawn().unwrap();
+
         #[cfg(feature = "RTT")]
         rprintln!("init end");
         (
@@ -140,6 +145,19 @@ mod app {
                 rprintln!("usb!");
             }
         }
+    }
+
+    #[task(local = [st7580_driver, should_init: bool = true])]
+    fn plm(ctx: plm::Context) {
+        let plm::LocalResources {
+            st7580_driver: driver,
+            should_init,
+        } = ctx.local;
+        if *should_init {
+            driver.init();
+            *should_init = false;
+        }
+        plm::spawn_after(1.secs()).unwrap();
     }
 
     #[task(binds = USART1,  local = [st7580_interrupt_handler])]

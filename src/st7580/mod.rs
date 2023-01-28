@@ -4,6 +4,7 @@ mod cmd;
 mod constants;
 mod globals;
 mod types;
+pub mod frame;
 
 use core::borrow::{Borrow, BorrowMut};
 
@@ -20,50 +21,7 @@ use hal::{
 };
 use stm32f4xx_hal as hal;
 use types::*;
-
-#[repr(C)]
-#[derive(Debug, Clone)]
-pub struct Frame {
-    stx: u8,
-    length: u8,
-    command: u8,
-    data: [u8; 255],
-    checksum: u16,
-}
-
-impl Default for Frame {
-    fn default() -> Self {
-        Self {
-            stx: Default::default(),
-            length: Default::default(),
-            command: Default::default(),
-            data: [0; 255],
-            checksum: Default::default(),
-        }
-    }
-}
-
-impl Frame {
-    fn calc_checksum(command: u8, length: u8, data: &[u8]) -> u16 {
-        assert_eq!(length as usize, data.len());
-        data.iter().fold(
-            u16::wrapping_add(command.into(), length.into()),
-            |acc, &val| u16::wrapping_add(acc, val.into()),
-        )
-    }
-
-    fn checksum(&self) -> u16 {
-        Self::calc_checksum(
-            self.command,
-            self.length,
-            &self.data[..self.length as _],
-        )
-    }
-
-    fn clear(&mut self) {
-        *self = Default::default();
-    }
-}
+pub use frame::*;
 
 #[derive(Default, Debug, Clone, Copy)]
 struct Timeout {

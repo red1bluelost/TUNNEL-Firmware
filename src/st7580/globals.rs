@@ -22,7 +22,6 @@ pub static mut COUNTER: Option<CounterMs<pac::TIM3>> = None;
 
 pub static STATUS_VALUE: Q2<u8> = Q2::new();
 pub static ACK_RX_VALUE: Q2<u8> = Q2::new();
-pub static ACK_TX_VALUE: Q2<u8> = Q2::new();
 
 pub static WAIT_ACK: Signal = Signal::new();
 pub static WAIT_STATUS: Signal = Signal::new();

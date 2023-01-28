@@ -133,6 +133,8 @@ pub struct InterruptHandler {
     rx_cksum: u16,
     rx_frame: Frame,
 
+    ack_tx_value: Option<u8>,
+
     tx_state: TxIrqStatus,
 }
 
@@ -225,9 +227,9 @@ impl InterruptHandler {
                             .enqueue(self.rx_frame.clone())
                             .unwrap();
                     }
-                    globals::ACK_TX_VALUE.enqueue(ACK).unwrap();
+                    self.ack_tx_value = Some(ACK);
                 } else {
-                    globals::ACK_TX_VALUE.enqueue(NAK).unwrap();
+                    self.ack_tx_value = Some(NAK);
                 }
                 serial.listen(Event::Txe);
                 self.rx_state = RxIrqStatus::FirstByte;

@@ -2,6 +2,7 @@
 
 mod cmd;
 mod constants;
+pub mod driver;
 pub mod frame;
 mod globals;
 pub mod isr;
@@ -21,6 +22,7 @@ use hal::{
 use stm32f4xx_hal as hal;
 
 /// All the re-exports
+pub use driver::*;
 pub use frame::*;
 pub use isr::*;
 
@@ -31,7 +33,7 @@ pub fn split(
     usart_rx: PA10<Alternate<7>>,
     tim3: pac::TIM3,
     clocks: &rcc::Clocks,
-) -> ((), InterruptHandler) {
+) -> (Driver, InterruptHandler) {
     let t_req = t_req.internal_resistor(Pull::None).speed(Speed::High);
     unsafe { globals::T_REQ_PIN.replace(t_req) };
 
@@ -55,5 +57,7 @@ pub fn split(
     let counter = tim3.counter(clocks);
     unsafe { globals::COUNTER.replace(counter) };
 
-    todo!()
+    let isr = InterruptHandler::new();
+
+    (todo!(), isr)
 }

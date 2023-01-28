@@ -28,6 +28,20 @@ pub struct InterruptHandler {
 }
 
 impl InterruptHandler {
+    pub(super) fn new() -> Self {
+        Self {
+            ic_timeout: Default::default(),
+            rx_state: RxIrqStatus::FirstByte,
+            rx_cur_idx: 0,
+            rx_cksum: 0,
+            rx_frame: Default::default(),
+            ack_tx_value: false,
+            tx_state: TxIrqStatus::SendStx,
+            tx_cur_idx: 0,
+            tx_frame: Default::default(),
+        }
+    }
+
     fn rx(
         &mut self,
         serial: &mut Serial1<(PA9<Alternate<7>>, PA10<Alternate<7>>), u8>,

@@ -47,6 +47,11 @@ pub const CMD_MIB_ERASE_CNF: u8 = 0x11;
 /// MIB Erase error command
 pub const CMD_MIB_ERASE_ERR: u8 = 0x13;
 
+/// PING request command
+pub const CMD_PING_REQ: u8 = 0x2C; /* PING request command */
+/// PING confirmation command
+pub const CMD_PING_CNF: u8 = 0x2D; /* PING confirmation command */
+
 /// PHY Data indication command
 pub const CMD_PHY_DATA_IND: u8 = 0x26;
 

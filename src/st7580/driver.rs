@@ -111,6 +111,21 @@ impl Driver {
         }
     }
 
+    pub fn ping(&mut self, buf: &[u8]) -> StResult<()> {
+        assert!(buf.len() < 255);
+        let tx_frame = Frame::new(STX_02, buf.len() as u8, CMD_PING_REQ, buf);
+
+        let confirm_frame = self.transmit_frame(tx_frame);
+
+        if confirm_frame.command == CMD_MIB_ERASE_ERR {
+            return Err(confirm_frame.data[0].try_into().unwrap());
+        }
+        if confirm_frame.data[..buf.len()] != buf {
+            return Err(StErr::ErrPing);
+        }
+        Ok(())
+    }
+
     /// Returns the confirmation frame or an error
     fn transmit_frame(&mut self, txf: Frame) -> StResult<Frame> {
         self.tx_frame_queue.enqueue(txf).unwrap();

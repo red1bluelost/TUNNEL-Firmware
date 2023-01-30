@@ -10,10 +10,13 @@ pub const STX_STATUS: u8 = 0x3F;
 
 /// Intercharacter timeout msec
 pub const IC_TMO: u32 = 10;
-/// Command timeout
-pub const CMD_TMO: u32 = 4000;
+/// ACK timeout msec
+pub const ACK_TMO: u32 = 40;
 /// Status message timeout
 pub const STATUS_MSG_TMO: u32 = 200;
+
+/// Command timeout
+pub const CMD_TMO: u32 = 4000;
 
 /// Command codes
 /// Reset request command
@@ -22,6 +25,13 @@ pub const CMD_RESET_REQ: u8 = 0x3C;
 pub const CMD_RESET_CNF: u8 = 0x3D;
 /// Reset indication command
 pub const CMD_RESET_IND: u8 = 0x3E;
+
+/// MIB Write request command
+pub const CMD_MIB_WRITE_REQ: u8 = 0x08;
+/// MIB Write confirmation command
+pub const CMD_MIB_WRITE_CNF: u8 = 0x09;
+/// MIB Write error command
+pub const CMD_MIB_WRITE_ERR: u8 = 0x0B;
 
 /// PHY Data indication command
 pub const CMD_PHY_DATA_IND: u8 = 0x26;

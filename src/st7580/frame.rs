@@ -21,7 +21,7 @@ impl Default for Frame {
 }
 
 impl Frame {
-    fn new(stx: u8, length: u8, command: u8, data: [u8; 255]) -> Self {
+    pub fn new(stx: u8, length: u8, command: u8, data: [u8; 255]) -> Self {
         Self {
             stx,
             length,

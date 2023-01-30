@@ -1,3 +1,4 @@
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StErr {
     TxInProgress = -1,
     ErrConfirm = -2,
@@ -13,7 +14,30 @@ pub enum StErr {
     TxErrBusy = -13,
 }
 
-pub type Result<T> = core::result::Result<T, StErr>;
+impl TryFrom<u8> for StErr {
+    type Error = u8;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        use StErr::*;
+        match value {
+            x if x == TxInProgress as u8 => Ok(TxInProgress),
+            x if x == ErrConfirm as u8 => Ok(ErrConfirm),
+            x if x == ErrBufLen as u8 => Ok(ErrBufLen),
+            x if x == ErrTimeout as u8 => Ok(ErrTimeout),
+            x if x == ErrPing as u8 => Ok(ErrPing),
+            x if x == ErrArgs as u8 => Ok(ErrArgs),
+            x if x == UnexpectedFrame as u8 => Ok(UnexpectedFrame),
+            x if x == RcvBufTooSmall as u8 => Ok(RcvBufTooSmall),
+            x if x == TxErrNak as u8 => Ok(TxErrNak),
+            x if x == TxErrNoStatus as u8 => Ok(TxErrNoStatus),
+            x if x == TxErrAckTmo as u8 => Ok(TxErrAckTmo),
+            x if x == TxErrBusy as u8 => Ok(TxErrBusy),
+            x => Err(x),
+        }
+    }
+}
+
+pub type StResult<T> = core::result::Result<T, StErr>;
 
 /// Frame tx High Level state machine states.
 pub enum TxStatus {

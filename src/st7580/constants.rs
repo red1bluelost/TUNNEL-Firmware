@@ -33,6 +33,13 @@ pub const CMD_MIB_WRITE_CNF: u8 = 0x09;
 /// MIB Write error command
 pub const CMD_MIB_WRITE_ERR: u8 = 0x0B;
 
+/// MIB Read request command
+pub const CMD_MIB_READ_REQ: u8 = 0x0C;
+/// MIB Read confirmation command
+pub const CMD_MIB_READ_CNF: u8 = 0x0D;
+/// MIB Read error command
+pub const CMD_MIB_READ_ERR: u8 = 0x0F;
+
 /// PHY Data indication command
 pub const CMD_PHY_DATA_IND: u8 = 0x26;
 

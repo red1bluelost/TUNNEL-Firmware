@@ -62,7 +62,7 @@ impl Driver {
         assert!(buf.len() < 255);
         let mut data = [0; 255];
         data[0] = idx;
-        data[1..].clone_from_slice(buf);
+        data[1..buf.len()].clone_from_slice(buf);
         let tx_frame =
             Frame::new(STX_02, (buf.len() as u8) + 1, CMD_MIB_WRITE_REQ, data);
 
@@ -72,6 +72,27 @@ impl Driver {
             CMD_MIB_WRITE_ERR => Err(confirm_frame.data[0].try_into().unwrap()),
             CMD_MIB_WRITE_CNF => Ok(()),
             _ => Err(StErr::ErrConfirm),
+        }
+    }
+
+    pub fn mib_read(&mut self, idx: u8, buf: &mut [u8]) -> StResult<()> {
+        let mut data = [0; 255];
+        data[0] = idx;
+        let tx_frame = Frame::new(STX_02, 1, CMD_MIB_READ_REQ, data);
+
+        let confirm_frame = self.transmit_frame(tx_frame)?;
+        match confirm_frame.command {
+            CMD_MIB_READ_ERR => Err(confirm_frame.data[0].try_into().unwrap()),
+            CMD_MIB_READ_CNF => {
+                let len = confirm_frame.length as _;
+                if buf.len() < len {
+                    Err(StErr::ErrBufLen)
+                } else {
+                    buf[..len].clone_from_slice(&confirm_frame.data[..len]);
+                    Ok(())
+                }
+            }
+            _ => Err(StErr::ErrConfirm.into())
         }
     }
 

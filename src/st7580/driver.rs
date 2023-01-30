@@ -58,6 +58,18 @@ impl Driver {
         }
     }
 
+    pub fn reset(&mut self) -> StResult<()> {
+        let tx_frame = Frame::new(STX_02, 0, CMD_RESET_REQ, [0; 255]);
+
+        self.transmit_frame(tx_frame).and_then(|confirm_frame| {
+            if confirm_frame.command != CMD_RESET_CNF {
+                Err(StErr::ErrConfirm)
+            } else {
+                Ok(())
+            }
+        })
+    }
+
     pub fn mib_write(&mut self, idx: u8, buf: &[u8]) -> StResult<()> {
         assert!(buf.len() < 255);
         let mut data = [0; 255];
@@ -113,14 +125,16 @@ impl Driver {
 
     pub fn ping(&mut self, buf: &[u8]) -> StResult<()> {
         assert!(buf.len() < 255);
-        let tx_frame = Frame::new(STX_02, buf.len() as u8, CMD_PING_REQ, buf);
+        let mut data = [0; 255];
+        data[..buf.len()].clone_from_slice(buf);
+        let tx_frame = Frame::new(STX_02, buf.len() as u8, CMD_PING_REQ, data);
 
-        let confirm_frame = self.transmit_frame(tx_frame);
+        let confirm_frame = self.transmit_frame(tx_frame)?;
 
         if confirm_frame.command == CMD_MIB_ERASE_ERR {
             return Err(confirm_frame.data[0].try_into().unwrap());
         }
-        if confirm_frame.data[..buf.len()] != buf {
+        if &confirm_frame.data[..buf.len()] != buf {
             return Err(StErr::ErrPing);
         }
         Ok(())

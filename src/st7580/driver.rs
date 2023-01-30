@@ -81,6 +81,7 @@ impl Driver {
         let tx_frame = Frame::new(STX_02, 1, CMD_MIB_READ_REQ, data);
 
         let confirm_frame = self.transmit_frame(tx_frame)?;
+
         match confirm_frame.command {
             CMD_MIB_READ_ERR => Err(confirm_frame.data[0].try_into().unwrap()),
             CMD_MIB_READ_CNF => {
@@ -92,7 +93,21 @@ impl Driver {
                     Ok(())
                 }
             }
-            _ => Err(StErr::ErrConfirm.into())
+            _ => Err(StErr::ErrConfirm.into()),
+        }
+    }
+
+    pub fn mib_erase(&mut self, idx: u8) -> StResult<()> {
+        let mut data = [0; 255];
+        data[0] = idx;
+        let tx_frame = Frame::new(STX_02, 1, CMD_MIB_ERASE_REQ, data);
+
+        let confirm_frame = self.transmit_frame(tx_frame)?;
+
+        match confirm_frame.command {
+            CMD_MIB_ERASE_ERR => Err(confirm_frame.data[0].try_into().unwrap()),
+            CMD_MIB_ERASE_CNF => Ok(()),
+            _ => Err(StErr::ErrConfirm),
         }
     }
 

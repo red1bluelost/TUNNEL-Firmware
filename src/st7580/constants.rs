@@ -40,6 +40,13 @@ pub const CMD_MIB_READ_CNF: u8 = 0x0D;
 /// MIB Read error command
 pub const CMD_MIB_READ_ERR: u8 = 0x0F;
 
+/// MIB Erase request command
+pub const CMD_MIB_ERASE_REQ: u8 = 0x10;
+/// MIB Erase confirmation command
+pub const CMD_MIB_ERASE_CNF: u8 = 0x11;
+/// MIB Erase error command
+pub const CMD_MIB_ERASE_ERR: u8 = 0x13;
+
 /// PHY Data indication command
 pub const CMD_PHY_DATA_IND: u8 = 0x26;
 

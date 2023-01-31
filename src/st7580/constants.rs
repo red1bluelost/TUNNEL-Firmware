@@ -18,6 +18,8 @@ pub const PHY_DATALEN_MAX: usize = 250;
 pub const DL_DATALEN_MAX: usize = 242;
 pub const SS_DATALEN_MAX: usize = 226;
 
+pub const PHY_DL_SS_RET_LEN: usize = 5;
+
 /// Intercharacter timeout msec
 pub const IC_TMO: u32 = 10;
 /// ACK timeout msec
@@ -73,13 +75,25 @@ pub const CMD_PHY_DATA_IND: u8 = 0x26;
 /// PHY Data error command
 pub const CMD_PHY_DATA_ERR: u8 = 0x27;
 
+/// DL Data request command
+pub const CMD_DL_DATA_REQ: u8 = 0x50;
+/// DL Data confirmation command
+pub const CMD_DL_DATA_CNF: u8 = 0x51;
 /// DL Data indication command
 pub const CMD_DL_DATA_IND: u8 = 0x52;
+/// DL Data error command
+pub const CMD_DL_DATA_ERR: u8 = 0x53;
 /// DL Sniffer indication command
 pub const CMD_DL_SNIFFER_IND: u8 = 0x5A;
 
+/// SS Data request command
+pub const CMD_SS_DATA_REQ: u8 = 0x54;
+/// SS Data confirmation command
+pub const CMD_SS_DATA_CNF: u8 = 0x55;
 /// SS Data indication command
 pub const CMD_SS_DATA_IND: u8 = 0x56;
+/// SS Data error command
+pub const CMD_SS_DATA_ERR: u8 = 0x57;
 /// SS Sniffer indication command
 pub const CMD_SS_SNIFFER_IND: u8 = 0x5E;
 

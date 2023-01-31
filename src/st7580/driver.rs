@@ -146,7 +146,40 @@ impl Driver {
         send_buf: &[u8],
         conf_buf: Option<&mut [u8]>,
     ) -> StResult<()> {
-        if (send_buf.len() > PHY_DATALEN_MAX) {
+        self.impl_phy_dl_data::<
+            PHY_DATALEN_MAX,
+            CMD_PHY_DATA_REQ,
+            CMD_PHY_DATA_CNF,
+            CMD_PHY_DATA_ERR
+        >(plm_opts, send_buf, conf_buf)
+    }
+
+    pub fn dl_data(
+        &mut self,
+        plm_opts: u8,
+        send_buf: &[u8],
+        conf_buf: Option<&mut [u8]>,
+    ) -> StResult<()> {
+        self.impl_phy_dl_data::<
+            DL_DATALEN_MAX,
+            CMD_DL_DATA_REQ,
+            CMD_DL_DATA_CNF,
+            CMD_DL_DATA_ERR
+        >(plm_opts, send_buf, conf_buf)
+    }
+
+    fn impl_phy_dl_data<
+        const LEN_MAX: usize,
+        const REQ: u8,
+        const CNF: u8,
+        const ERR: u8,
+    >(
+        &mut self,
+        plm_opts: u8,
+        send_buf: &[u8],
+        conf_buf: Option<&mut [u8]>,
+    ) -> StResult<()> {
+        if (send_buf.len() > LEN_MAX) {
             return Err(StErr::ErrArgs);
         }
         let mut data = [0; 255];
@@ -168,30 +201,23 @@ impl Driver {
 
         data[offset..send_buf.len()].clone_from_slice(send_buf);
 
-        let tx_frame = Frame::new(
-            STX_02,
-            send_buf.len() as u8 + 1,
-            CMD_PHY_DATA_REQ,
-            data,
-        );
+        let tx_frame = Frame::new(STX_02, send_buf.len() as u8 + 1, REQ, data);
 
         let confirm_frame = self.transmit_frame(tx_frame)?;
 
-        match confirm_frame.command {
-            CMD_PHY_DATA_ERR => Err(confirm_frame.data[0].try_into().unwrap()),
-            CMD_PHY_DATA_CNF => {
-                let Some(conf_buf) = conf_buf else { return Ok(()) };
-                let len = 5;
-                if conf_buf.len() < len {
-                    Err(StErr::ErrBufLen)
-                } else {
-                    conf_buf[..len]
-                        .clone_from_slice(&confirm_frame.data[..len]);
-                    Ok(())
-                }
-            }
-            _ => Err(StErr::ErrConfirm.into()),
+        if confirm_frame.command == ERR {
+            return Err(confirm_frame.data[0].try_into().unwrap());
         }
+        if confirm_frame.command != CNF {
+            return Err(StErr::ErrConfirm.into());
+        }
+        let Some(conf_buf) = conf_buf else { return Ok(()) };
+        let len = PHY_DL_SS_RET_LEN;
+        if conf_buf.len() < len {
+            return Err(StErr::ErrBufLen);
+        }
+        conf_buf[..len].clone_from_slice(&confirm_frame.data[..len]);
+        Ok(())
     }
 
     /// Returns the confirmation frame or an error

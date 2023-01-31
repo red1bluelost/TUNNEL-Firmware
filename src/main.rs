@@ -10,6 +10,7 @@ use panic_halt as _;
 #[cfg(feature = "QEMU")]
 use panic_semihosting as _;
 
+mod dbg;
 pub mod signal;
 pub mod st7580;
 
@@ -19,9 +20,9 @@ pub mod st7580;
     dispatchers = [SPI1]
 )]
 mod app {
+
+    use crate::dbg;
     use crate::st7580;
-    #[cfg(feature = "QEMU")]
-    use cortex_m_semihosting::{debug, hprintln};
     use hal::{
         gpio::*,
         otg_fs::{UsbBus, UsbBusType, USB},
@@ -29,8 +30,6 @@ mod app {
         prelude::*,
         timer,
     };
-    #[cfg(feature = "RTT")]
-    use rtt_target::{rprintln, rtt_init_print};
     use stm32f4xx_hal as hal;
     use usb_device::prelude::*;
 
@@ -49,13 +48,8 @@ mod app {
 
     #[init]
     fn init(ctx: init::Context) -> (Shared, Local, init::Monotonics) {
-        #[cfg(feature = "RTT")]
-        {
-            rtt_init_print!();
-            rprintln!("init");
-        }
-        #[cfg(feature = "QEMU")]
-        hprintln!("init");
+        dbg::init!();
+        dbg::println!("init");
 
         static mut EP_MEMORY: [u32; 1024] = [0; 1024];
 
@@ -113,13 +107,11 @@ mod app {
 
         // exit QEMU
         // NOTE do not run this on hardware; it can corrupt OpenOCD state
-        #[cfg(feature = "QEMU")]
-        debug::exit(debug::EXIT_SUCCESS);
+        dbg::exit!();
 
         plm::spawn().unwrap();
 
-        #[cfg(feature = "RTT")]
-        rprintln!("init end");
+        dbg::println!("init end");
         (
             Shared {},
             Local {
@@ -135,8 +127,7 @@ mod app {
     fn idle(ctx: idle::Context) -> ! {
         loop {
             if ctx.local.usb_dev.poll(&mut []) {
-                #[cfg(feature = "RTT")]
-                rprintln!("usb!");
+                dbg::println!("usb!");
             }
         }
     }

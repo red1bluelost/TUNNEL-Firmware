@@ -220,6 +220,65 @@ impl Driver {
         Ok(())
     }
 
+    pub fn ss_data(
+        &mut self,
+        plm_opts: u8,
+        send_buf: &[u8],
+        clr_len: u8,
+        enc_len: u8,
+        ret_buf: Option<&mut [u8]>,
+    ) -> StResult<()> {
+        let data_len = send_buf.len();
+        assert_eq!(data_len, clr_len as usize + enc_len as usize);
+        if (data_len > SS_DATALEN_MAX)
+            || (enc_len == 0 && clr_len < 16)
+            || (enc_len > 0 && data_len < 4)
+        {
+            return Err(StErr::ErrArgs);
+        }
+
+        let mut data = [0; 255];
+        let mut offset = 0;
+        data[offset] = plm_opts;
+        offset += 1;
+
+        #[cfg(feature = "CUSTOM_MIB_FREQUENCY")]
+        for val in TXFREQS {
+            data[offset] = val;
+            offset += 1;
+        }
+
+        #[cfg(feature = "GAIN_SELECTOR")]
+        {
+            data[offset] = TXGAIN;
+            offset += 1;
+        }
+
+        data[offset] = clr_len;
+        offset += 1;
+
+        data[offset..send_buf.len()].clone_from_slice(send_buf);
+
+        let tx_frame =
+            Frame::new(STX_02, send_buf.len() as u8 + 2, CMD_SS_DATA_REQ, data);
+
+        let confirm_frame = self.transmit_frame(tx_frame)?;
+
+        if confirm_frame.command == CMD_SS_DATA_ERR {
+            return Err(confirm_frame.data[0].try_into().unwrap());
+        }
+        if confirm_frame.command != CMD_SS_DATA_CNF {
+            return Err(StErr::ErrConfirm.into());
+        }
+        let Some(ret_buf) = ret_buf else { return Ok(()) };
+        let len = PHY_DL_SS_RET_LEN;
+        if ret_buf.len() < len {
+            return Err(StErr::ErrBufLen);
+        }
+        ret_buf[..len].clone_from_slice(&confirm_frame.data[..len]);
+        Ok(())
+    }
+
     /// Returns the confirmation frame or an error
     fn transmit_frame(&mut self, txf: Frame) -> StResult<Frame> {
         self.tx_frame_queue.enqueue(txf).unwrap();

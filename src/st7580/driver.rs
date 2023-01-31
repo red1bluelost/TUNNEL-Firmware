@@ -114,7 +114,7 @@ impl Driver {
                     Ok(())
                 }
             }
-            _ => Err(StErr::ErrConfirm.into()),
+            _ => Err(StErr::ErrConfirm),
         }
     }
 
@@ -218,7 +218,7 @@ impl Driver {
             return Err(confirm_frame.data[0].try_into().unwrap());
         }
         if confirm_frame.command != CNF {
-            return Err(StErr::ErrConfirm.into());
+            return Err(StErr::ErrConfirm);
         }
         let Some(conf_buf) = conf_buf else { return Ok(()) };
         let len = PHY_DL_SS_RET_LEN;
@@ -277,7 +277,7 @@ impl Driver {
             return Err(confirm_frame.data[0].try_into().unwrap());
         }
         if confirm_frame.command != CMD_SS_DATA_CNF {
-            return Err(StErr::ErrConfirm.into());
+            return Err(StErr::ErrConfirm);
         }
         let Some(ret_buf) = ret_buf else { return Ok(()) };
         let len = PHY_DL_SS_RET_LEN;

@@ -35,7 +35,7 @@ impl Frame {
         }
     }
 
-    fn calc_checksum(command: u8, length: u8, data: &[u8]) -> u16 {
+    pub fn calc_checksum(command: u8, length: u8, data: &[u8]) -> u16 {
         assert_eq!(length as usize, data.len());
         data.iter().fold(
             u16::wrapping_add(command.into(), length.into()),
@@ -43,7 +43,7 @@ impl Frame {
         )
     }
 
-    fn checksum(&self) -> u16 {
+    pub fn checksum(&self) -> u16 {
         Self::calc_checksum(
             self.command,
             self.length,
@@ -51,7 +51,7 @@ impl Frame {
         )
     }
 
-    fn clear(&mut self) {
+    pub fn clear(&mut self) {
         *self = Default::default();
     }
 }

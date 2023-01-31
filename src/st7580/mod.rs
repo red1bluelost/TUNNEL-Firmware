@@ -1,6 +1,5 @@
 //! Code relating to the ST7580 chip
 
-mod cmd;
 mod constants;
 pub mod driver;
 pub mod frame;
@@ -8,16 +7,13 @@ mod globals;
 pub mod isr;
 mod types;
 
-use constants::*;
-use types::*;
-
 /// Code use from the HAL
 use hal::{
     gpio::*,
     pac, rcc,
-    serial::{config, Event, RxISR, Serial, Serial1, TxISR},
+    serial::{config, Serial},
     time,
-    timer::{CounterMs, Delay, ExtU32, TimerExt},
+    timer::{CounterMs, TimerExt},
 };
 use stm32f4xx_hal as hal;
 
@@ -29,6 +25,8 @@ pub use isr::*;
 pub fn split(
     t_req: PA5<Output<PushPull>>,
     resetn: PA8<Output<PushPull>>,
+    tx_on: PC0<Input>,
+    rx_on: PC1<Input>,
     usart: pac::USART1,
     usart_tx: PA9<Alternate<7>>,
     usart_rx: PA10<Alternate<7>>,
@@ -61,7 +59,7 @@ pub fn split(
 
     let isr = InterruptHandler::new();
 
-    let driver = Driver::new(resetn, tim5, clocks);
+    let driver = Driver::new(resetn, tx_on, rx_on, tim5, clocks);
 
     (driver, isr)
 }

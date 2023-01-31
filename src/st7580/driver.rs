@@ -10,6 +10,11 @@ pub struct Driver {
     resetn: PA8<Output<PushPull>>,
     delay: DelayMs<pac::TIM5>,
 
+    #[allow(unused)]
+    tx_on: PC0<Input>,
+    #[allow(unused)]
+    rx_on: PC1<Input>,
+
     ind_frame_queue: globals::FrameConsumer<{ globals::QUEUE_SIZE }>,
     cnf_frame_queue: globals::FrameConsumer<2>,
     tx_frame_queue: globals::FrameProducer<2>,
@@ -24,11 +29,15 @@ pub struct Driver {
 impl Driver {
     pub fn new(
         resetn: PA8<Output<PushPull>>,
+        tx_on: PC0<Input>,
+        rx_on: PC1<Input>,
         tim5: pac::TIM5,
         clocks: &rcc::Clocks,
     ) -> Self {
         Self {
             resetn: resetn.internal_resistor(Pull::None).speed(Speed::High),
+            tx_on: tx_on.internal_resistor(Pull::None),
+            rx_on: rx_on.internal_resistor(Pull::None),
             delay: tim5.delay_ms(clocks),
             ind_frame_queue: unsafe { globals::FRAME_QUEUE.split() }.1,
             cnf_frame_queue: unsafe { globals::TX_FRAME.split() }.1,
@@ -131,7 +140,7 @@ impl Driver {
 
         let confirm_frame = self.transmit_frame(tx_frame)?;
 
-        if confirm_frame.command == CMD_MIB_ERASE_ERR {
+        if confirm_frame.command != CMD_PING_CNF {
             return Err(confirm_frame.data[0].try_into().unwrap());
         }
         if &confirm_frame.data[..buf.len()] != buf {
@@ -179,7 +188,7 @@ impl Driver {
         send_buf: &[u8],
         conf_buf: Option<&mut [u8]>,
     ) -> StResult<()> {
-        if (send_buf.len() > LEN_MAX) {
+        if send_buf.len() > LEN_MAX {
             return Err(StErr::ErrArgs);
         }
         let mut data = [0; 255];
@@ -298,7 +307,7 @@ impl Driver {
     fn send_frame(&mut self) -> nb::Result<(), StErr> {
         match self.sf_state {
             TxStatus::TxreqLow => {
-                unsafe { globals::LOCAL_FRAME_TX.reset() };
+                globals::LOCAL_FRAME_TX.reset();
                 globals::STATUS_VALUE.dequeue();
                 unsafe { globals::T_REQ_PIN.as_mut() }.unwrap().set_low();
                 self.status_msg_tmo.set(STATUS_MSG_TMO);

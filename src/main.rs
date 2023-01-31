@@ -1,8 +1,5 @@
 #![no_main]
 #![no_std]
-// TEMPORARY
-#![allow(dead_code)]
-#![allow(unused)]
 
 #[cfg(feature = "RTT")]
 use panic_rtt_target as _;
@@ -13,9 +10,8 @@ use panic_halt as _;
 #[cfg(feature = "QEMU")]
 use panic_semihosting as _;
 
-mod plm01a1;
-mod signal;
-mod st7580;
+pub mod signal;
+pub mod st7580;
 
 #[rtic::app(
     device = hal::pac,
@@ -23,10 +19,7 @@ mod st7580;
     dispatchers = [SPI1]
 )]
 mod app {
-    use crate::{
-        plm01a1,
-        st7580::{self, driver},
-    };
+    use crate::st7580;
     #[cfg(feature = "QEMU")]
     use cortex_m_semihosting::{debug, hprintln};
     use hal::{
@@ -34,7 +27,6 @@ mod app {
         otg_fs::{UsbBus, UsbBusType, USB},
         pac,
         prelude::*,
-        serial::Serial1,
         timer,
     };
     #[cfg(feature = "RTT")]
@@ -85,6 +77,8 @@ mod app {
         let (st7580_driver, st7580_interrupt_handler) = st7580::split(
             gpioa.pa5.into_push_pull_output(),
             gpioa.pa8.into_push_pull_output(),
+            gpioc.pc0,
+            gpioc.pc1,
             dp.USART1,
             gpioa.pa9.into_alternate(),
             gpioa.pa10.into_alternate(),

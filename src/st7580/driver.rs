@@ -76,7 +76,7 @@ impl Driver {
         data[0] = idx;
         data[1..buf.len()].clone_from_slice(buf);
         let tx_frame =
-            Frame::new(STX_02, (buf.len() as u8) + 1, CMD_MIB_WRITE_REQ, data);
+            Frame::new(STX_02, buf.len() as u8 + 1, CMD_MIB_WRITE_REQ, data);
 
         let confirm_frame = self.transmit_frame(tx_frame)?;
 
@@ -138,6 +138,60 @@ impl Driver {
             return Err(StErr::ErrPing);
         }
         Ok(())
+    }
+
+    pub fn phy_data(
+        &mut self,
+        plm_opts: u8,
+        send_buf: &[u8],
+        conf_buf: Option<&mut [u8]>,
+    ) -> StResult<()> {
+        if (send_buf.len() > PHY_DATALEN_MAX) {
+            return Err(StErr::ErrArgs);
+        }
+        let mut data = [0; 255];
+        let mut offset = 0;
+        data[offset] = plm_opts;
+        offset += 1;
+
+        #[cfg(feature = "CUSTOM_MIB_FREQUENCY")]
+        for val in TXFREQS {
+            data[offset] = val;
+            offset += 1;
+        }
+
+        #[cfg(feature = "GAIN_SELECTOR")]
+        {
+            data[offset] = TXGAIN;
+            offset += 1;
+        }
+
+        data[offset..send_buf.len()].clone_from_slice(send_buf);
+
+        let tx_frame = Frame::new(
+            STX_02,
+            send_buf.len() as u8 + 1,
+            CMD_PHY_DATA_REQ,
+            data,
+        );
+
+        let confirm_frame = self.transmit_frame(tx_frame)?;
+
+        match confirm_frame.command {
+            CMD_PHY_DATA_ERR => Err(confirm_frame.data[0].try_into().unwrap()),
+            CMD_PHY_DATA_CNF => {
+                let Some(conf_buf) = conf_buf else { return Ok(()) };
+                let len = 5;
+                if conf_buf.len() < len {
+                    Err(StErr::ErrBufLen)
+                } else {
+                    conf_buf[..len]
+                        .clone_from_slice(&confirm_frame.data[..len]);
+                    Ok(())
+                }
+            }
+            _ => Err(StErr::ErrConfirm.into()),
+        }
     }
 
     /// Returns the confirmation frame or an error

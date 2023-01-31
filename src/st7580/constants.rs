@@ -1,3 +1,9 @@
+#[cfg(feature = "CUSTOM_MIB_FREQUENCY")]
+pub const TXFREQS: [u8; 3] = [0, 0, 0];
+
+#[cfg(feature = "GAIN_SELECTOR")]
+pub const TXGAIN: u8 = 0;
+
 /// Acknowledgement codes
 pub const ACK: u8 = 0x06;
 pub const NAK: u8 = 0x15;
@@ -7,6 +13,10 @@ pub const BUSY_MASK: u8 = 0x06;
 pub const STX_02: u8 = 0x02;
 pub const STX_03: u8 = 0x03;
 pub const STX_STATUS: u8 = 0x3F;
+
+pub const PHY_DATALEN_MAX: usize = 250;
+pub const DL_DATALEN_MAX: usize = 242;
+pub const SS_DATALEN_MAX: usize = 226;
 
 /// Intercharacter timeout msec
 pub const IC_TMO: u32 = 10;
@@ -54,8 +64,14 @@ pub const CMD_PING_REQ: u8 = 0x2C; /* PING request command */
 /// PING confirmation command
 pub const CMD_PING_CNF: u8 = 0x2D; /* PING confirmation command */
 
+/// PHY Data request command
+pub const CMD_PHY_DATA_REQ: u8 = 0x24;
+/// PHY Data confirmation command
+pub const CMD_PHY_DATA_CNF: u8 = 0x25;
 /// PHY Data indication command
 pub const CMD_PHY_DATA_IND: u8 = 0x26;
+/// PHY Data error command
+pub const CMD_PHY_DATA_ERR: u8 = 0x27;
 
 /// DL Data indication command
 pub const CMD_DL_DATA_IND: u8 = 0x52;

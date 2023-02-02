@@ -22,51 +22,31 @@ pub use driver::*;
 pub use frame::*;
 pub use isr::*;
 
-#[derive(Debug, Default)]
 pub struct Builder {
-    t_req: Option<PA5<Output<PushPull>>>,
-    resetn: Option<PA8<Output<PushPull>>>,
-    tx_on: Option<PC0<Input>>,
-    rx_on: Option<PC1<Input>>,
-    usart: Option<pac::USART1>,
-    usart_tx: Option<PA9<Alternate<7>>>,
-    usart_rx: Option<PA10<Alternate<7>>>,
-    tim3: Option<pac::TIM3>,
-    tim5: Option<pac::TIM5>,
-}
-
-macro_rules! setter {
-    ($n:ident: $t: ty) => {
-        #[inline(always)]
-        pub fn $n(self, $n: $t) -> Self {
-            assert!(self.$n.is_none());
-            let $n = Some($n);
-            Self { $n, ..self }
-        }
-    };
+    pub t_req: PA5<Output<PushPull>>,
+    pub resetn: PA8<Output<PushPull>>,
+    pub tx_on: PC0<Input>,
+    pub rx_on: PC1<Input>,
+    pub usart: pac::USART1,
+    pub usart_tx: PA9<Alternate<7>>,
+    pub usart_rx: PA10<Alternate<7>>,
+    pub tim3: pac::TIM3,
+    pub tim5: pac::TIM5,
 }
 
 impl Builder {
-    setter!(t_req: PA5<Output<PushPull>>);
-    setter!(resetn: PA8<Output<PushPull>>);
-    setter!(tx_on: PC0<Input>);
-    setter!(rx_on: PC1<Input>);
-    setter!(usart: pac::USART1);
-    setter!(usart_tx: PA9<Alternate<7>>);
-    setter!(usart_rx: PA10<Alternate<7>>);
-    setter!(tim3: pac::TIM3);
-    setter!(tim5: pac::TIM5);
-
     pub fn split(self, clocks: &rcc::Clocks) -> (Driver, InterruptHandler) {
-        let t_req = self.t_req.unwrap();
-        let resetn = self.resetn.unwrap();
-        let tx_on = self.tx_on.unwrap();
-        let rx_on = self.rx_on.unwrap();
-        let usart = self.usart.unwrap();
-        let usart_tx = self.usart_tx.unwrap();
-        let usart_rx = self.usart_rx.unwrap();
-        let tim3 = self.tim3.unwrap();
-        let tim5 = self.tim5.unwrap();
+        let Self {
+            t_req,
+            resetn,
+            tx_on,
+            rx_on,
+            usart,
+            usart_tx,
+            usart_rx,
+            tim3,
+            tim5,
+        } = self;
 
         let t_req = t_req.internal_resistor(Pull::None).speed(Speed::High);
         unsafe { globals::T_REQ_PIN.replace(t_req) };

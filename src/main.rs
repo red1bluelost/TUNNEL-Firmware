@@ -69,18 +69,18 @@ mod app {
         let gpioa = dp.GPIOA.split();
         let gpioc = dp.GPIOC.split();
 
-        let (st7580_driver, st7580_interrupt_handler) =
-            st7580::Builder::default()
-                .t_req(gpioa.pa5.into_push_pull_output())
-                .resetn(gpioa.pa8.into_push_pull_output())
-                .tx_on(gpioc.pc0)
-                .rx_on(gpioc.pc1)
-                .usart(dp.USART1)
-                .usart_tx(gpioa.pa9.into_alternate())
-                .usart_rx(gpioa.pa10.into_alternate())
-                .tim3(dp.TIM3)
-                .tim5(dp.TIM5)
-                .split(&clocks);
+        let (st7580_driver, st7580_interrupt_handler) = st7580::Builder {
+            t_req: gpioa.pa5.into_push_pull_output(),
+            resetn: gpioa.pa8.into_push_pull_output(),
+            tx_on: gpioc.pc0,
+            rx_on: gpioc.pc1,
+            usart: dp.USART1,
+            usart_tx: gpioa.pa9.into_alternate(),
+            usart_rx: gpioa.pa10.into_alternate(),
+            tim3: dp.TIM3,
+            tim5: dp.TIM5,
+        }
+        .split(&clocks);
 
         let usb = USB {
             usb_global: dp.OTG_FS_GLOBAL,

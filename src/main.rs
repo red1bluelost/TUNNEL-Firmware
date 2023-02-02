@@ -73,12 +73,14 @@ mod app {
             hclk: clocks.hclk(),
         };
 
-        static mut USB_BUS: Option<usb_device::bus::UsbBusAllocator<UsbBusType>> = None;
+        static mut USB_BUS: Option<
+            usb_device::bus::UsbBusAllocator<UsbBusType>,
+        > = None;
         unsafe { USB_BUS.replace(UsbBus::new(usb, &mut EP_MEMORY)) };
 
         let usb_dev = UsbDeviceBuilder::new(
             unsafe { USB_BUS.as_ref().unwrap() },
-            UsbVidPid(0x16c0, 0x27dd),
+            UsbVidPid(0x0000, 0x0000),
         )
         .manufacturer("TUNNEL Team")
         .product("TUNNEL Device")

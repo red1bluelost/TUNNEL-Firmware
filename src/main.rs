@@ -20,7 +20,6 @@ pub mod st7580;
     dispatchers = [SPI1]
 )]
 mod app {
-
     use crate::dbg;
     use crate::st7580;
     use hal::{
@@ -32,6 +31,7 @@ mod app {
     };
     use stm32f4xx_hal as hal;
     use usb_device::prelude::*;
+    use usbd_serial::{SerialPort, USB_CLASS_CDC};
 
     #[shared]
     struct Shared {}
@@ -39,6 +39,7 @@ mod app {
     #[local]
     struct Local {
         usb_dev: UsbDevice<'static, UsbBusType>,
+        usb_comm: SerialPort<'static, UsbBusType>,
         st7580_interrupt_handler: st7580::InterruptHandler,
         st7580_driver: st7580::Driver,
     }
@@ -94,28 +95,28 @@ mod app {
             usb_device::bus::UsbBusAllocator<UsbBusType>,
         > = None;
         unsafe { USB_BUS.replace(UsbBus::new(usb, &mut EP_MEMORY)) };
-
-        let usb_dev = UsbDeviceBuilder::new(
-            unsafe { USB_BUS.as_ref().unwrap() },
-            UsbVidPid(0x0000, 0x0000),
-        )
-        .manufacturer("TUNNEL Team")
-        .product("TUNNEL Device")
-        .serial_number("TEST")
-        .device_class(0xff)
-        .build();
+        let usb_bus = unsafe { USB_BUS.as_ref() }.unwrap();
+        let usb_comm = SerialPort::new(usb_bus);
+        let usb_dev = UsbDeviceBuilder::new(usb_bus, UsbVidPid(0x0000, 0x0000))
+            .manufacturer("TUNNEL Team")
+            .product("TUNNEL Device")
+            .serial_number("deadbeef")
+            .device_class(USB_CLASS_CDC)
+            .self_powered(true)
+            .build();
 
         // exit QEMU
         // NOTE do not run this on hardware; it can corrupt OpenOCD state
         dbg::exit!();
 
-        plm::spawn().unwrap();
+        // plm::spawn().unwrap();
 
         dbg::println!("init end");
         (
             Shared {},
             Local {
                 usb_dev,
+                usb_comm,
                 st7580_interrupt_handler,
                 st7580_driver,
             },
@@ -123,11 +124,25 @@ mod app {
         )
     }
 
-    #[idle(local = [usb_dev])]
-    fn idle(ctx: idle::Context) -> ! {
-        loop {
-            if ctx.local.usb_dev.poll(&mut []) {
-                dbg::println!("usb!");
+    #[task(binds = OTG_FS, local = [usb_dev, usb_comm])]
+    fn usb(ctx: usb::Context) {
+        let usb::LocalResources { usb_dev, usb_comm } = ctx.local;
+
+        if !usb_dev.poll(&mut [usb_comm]) {
+            return;
+        }
+
+        const DATA: &[u8] = "test string\n".as_bytes();
+        match usb_comm.write(DATA) {
+            Ok(count) => {
+                dbg::println!(
+                    "*** USB wrote {} bytes out of {}",
+                    count,
+                    DATA.len()
+                );
+            }
+            Err(err) => {
+                dbg::println!("USB write failed: {:?}", err);
             }
         }
     }

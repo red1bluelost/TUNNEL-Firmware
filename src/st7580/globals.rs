@@ -12,7 +12,6 @@ pub static mut FRAME_QUEUE: Queue<Frame, QUEUE_SIZE> = Queue::new();
 pub type FrameConsumer<const SIZE: usize> = Consumer<'static, Frame, SIZE>;
 pub type FrameProducer<const SIZE: usize> = Producer<'static, Frame, SIZE>;
 pub static mut CONFIRM_FRAME: Queue<Frame, 2> = Queue::new();
-
 pub static mut TX_FRAME: Queue<Frame, 2> = Queue::new();
 
 type SerialPlm = Option<Serial1<(PA9<Alternate<7>>, PA10<Alternate<7>>), u8>>;

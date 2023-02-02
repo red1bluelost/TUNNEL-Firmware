@@ -97,7 +97,7 @@ mod app {
 
         let usb_dev = UsbDeviceBuilder::new(
             unsafe { USB_BUS.as_ref().unwrap() },
-            UsbVidPid(0x16c0, 0x27dd),
+            UsbVidPid(0x0000, 0x0000),
         )
         .manufacturer("TUNNEL Team")
         .product("TUNNEL Device")

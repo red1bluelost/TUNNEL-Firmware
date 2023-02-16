@@ -56,12 +56,13 @@ impl Driver {
         self.resetn.set_high();
 
         loop {
+            crate::dbg::println!("top of plm init loop");
+
             self.delay.delay(100.millis());
-            if self
-                .ind_frame_queue
-                .dequeue()
-                .map_or(false, |f| f.command == CMD_RESET_IND)
-            {
+            if self.ind_frame_queue.dequeue().map_or(false, |f| {
+                crate::dbg::println!("inside init: {:?}", f);
+                f.command == CMD_RESET_IND
+            }) {
                 return;
             }
         }
@@ -286,6 +287,11 @@ impl Driver {
         }
         ret_buf[..len].clone_from_slice(&confirm_frame.data[..len]);
         Ok(())
+    }
+
+    #[inline(always)]
+    pub fn receive_frame(&mut self) -> Option<Frame> {
+        self.ind_frame_queue.dequeue()
     }
 
     /// Returns the confirmation frame or an error

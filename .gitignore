@@ -7,3 +7,4 @@
 
 /.vim/
 /.idea/
+.vscode/.cortex-debug.registers.state.json

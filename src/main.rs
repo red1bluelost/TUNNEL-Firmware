@@ -57,12 +57,7 @@ mod app {
         let dp = ctx.device;
 
         let rcc = dp.RCC.constrain();
-        let clocks = rcc
-            .cfgr
-            .use_hse(8.MHz())
-            .sysclk(48.MHz())
-            .require_pll48clk()
-            .freeze();
+        let clocks = rcc.cfgr.use_hse(8.MHz()).sysclk(48.MHz()).freeze();
 
         let mono = dp.TIM2.monotonic_us(&clocks);
 
@@ -97,11 +92,11 @@ mod app {
         unsafe { USB_BUS.replace(UsbBus::new(usb, &mut EP_MEMORY)) };
         let usb_bus = unsafe { USB_BUS.as_ref() }.unwrap();
         let usb_comm = SerialPort::new(usb_bus);
-        let usb_dev = UsbDeviceBuilder::new(usb_bus, UsbVidPid(0x0000, 0x0000))
+        let usb_dev = UsbDeviceBuilder::new(usb_bus, UsbVidPid(0x0000, 0x6969))
             .manufacturer("TUNNEL Team")
             .product("TUNNEL Device")
             .serial_number("deadbeef")
-            .device_class(USB_CLASS_CDC)
+            .device_class(0xff)
             .self_powered(true)
             .build();
 
@@ -153,15 +148,23 @@ mod app {
             st7580_driver: driver,
             should_init,
         } = ctx.local;
+
+        // We must perform the initialization stage here due to the `init`
+        // task being interrupt free.
         if *should_init {
+            dbg::println!("plm init");
             driver.init();
+            todo!("Modem MIBs configuration");
+            todo!("Phy MIBs configuration");
             *should_init = false;
         }
+
         plm::spawn_after(1.secs()).unwrap();
     }
 
     #[task(binds = USART1,  local = [st7580_interrupt_handler])]
     fn usart1(ctx: usart1::Context) {
+        dbg::println!("interrupt handler for PLM");
         ctx.local.st7580_interrupt_handler.handle();
     }
 }

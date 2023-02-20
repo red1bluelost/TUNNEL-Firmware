@@ -10,10 +10,11 @@ mod types;
 /// Code use from the HAL
 use hal::{
     gpio::*,
-    pac, rcc,
+    pac,
+    prelude::*,
+    rcc,
     serial::{config, Serial},
     time,
-    timer::{CounterMs, TimerExt},
 };
 use stm32f4xx_hal as hal;
 
@@ -54,15 +55,18 @@ impl Builder {
         let serial_plm = Serial::new(
             usart,
             (
-                usart_tx.internal_resistor(Pull::None).speed(Speed::High),
-                usart_rx.internal_resistor(Pull::None).speed(Speed::High),
+                usart_tx
+                    .internal_resistor(Pull::None)
+                    .speed(Speed::VeryHigh),
+                usart_rx
+                    .internal_resistor(Pull::None)
+                    .speed(Speed::VeryHigh),
             ),
             config::Config::default()
                 .wordlength_8()
                 .baudrate(time::Bps(57600))
                 .stopbits(config::StopBits::STOP1)
-                .parity_none()
-                .dma(config::DmaConfig::TxRx),
+                .parity_none(),
             clocks,
         )
         .unwrap();

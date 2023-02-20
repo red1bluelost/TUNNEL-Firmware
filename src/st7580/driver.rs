@@ -1,14 +1,15 @@
 use super::{constants::*, frame::*, globals, types::*};
+use cortex_m::prelude::*;
 use hal::{
     gpio::*,
     pac, rcc, serial,
-    timer::{DelayMs, ExtU32, TimerExt},
+    timer::{DelayUs, ExtU32, TimerExt},
 };
 use stm32f4xx_hal as hal;
 
 pub struct Driver {
     resetn: PA8<Output<PushPull>>,
-    delay: DelayMs<pac::TIM5>,
+    delay: DelayUs<pac::TIM5>,
 
     #[allow(unused)]
     tx_on: PC0<Input>,
@@ -35,10 +36,10 @@ impl Driver {
         clocks: &rcc::Clocks,
     ) -> Self {
         Self {
-            resetn: resetn.internal_resistor(Pull::None).speed(Speed::High),
+            resetn: resetn.internal_resistor(Pull::None).speed(Speed::VeryHigh),
             tx_on: tx_on.internal_resistor(Pull::None),
             rx_on: rx_on.internal_resistor(Pull::None),
-            delay: tim5.delay_ms(clocks),
+            delay: tim5.delay_us(clocks),
             ind_frame_queue: unsafe { globals::FRAME_QUEUE.split() }.1,
             cnf_frame_queue: unsafe { globals::TX_FRAME.split() }.1,
             tx_frame_queue: unsafe { globals::TX_FRAME.split() }.0,
@@ -51,18 +52,19 @@ impl Driver {
     }
 
     pub fn init(&mut self) {
+        crate::dbg::println!("initializing PLM");
         self.resetn.set_low();
         self.delay.delay(1500.millis());
         self.resetn.set_high();
 
         loop {
-            crate::dbg::println!("top of plm init loop");
-
             self.delay.delay(100.millis());
-            if self.ind_frame_queue.dequeue().map_or(false, |f| {
-                crate::dbg::println!("inside init: {:?}", f);
-                f.command == CMD_RESET_IND
-            }) {
+            if self
+                .ind_frame_queue
+                .dequeue()
+                .map_or(false, |f| f.command == CMD_RESET_IND)
+            {
+                crate::dbg::println!("PLM is now initialized");
                 return;
             }
         }
@@ -346,6 +348,7 @@ impl Driver {
                     Err(nb::Error::Other(StErr::TxErrBusy))
                 } else {
                     self.sf_state = TxStatus::WaitTxFrameDone;
+                    globals::TX_ACTIVE.set();
                     unsafe { globals::SERIAL_PLM.as_mut() }
                         .unwrap()
                         .listen(serial::Event::Txe);

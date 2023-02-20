@@ -17,7 +17,7 @@ pub mod st7580;
 #[rtic::app(
     device = hal::pac,
     peripherals = true,
-    dispatchers = [SPI1]
+    dispatchers = [SPI1, SPI2, SPI3]
 )]
 mod app {
     use crate::dbg;
@@ -31,7 +31,7 @@ mod app {
     };
     use stm32f4xx_hal as hal;
     use usb_device::prelude::*;
-    use usbd_serial::{SerialPort, USB_CLASS_CDC};
+    use usbd_serial::SerialPort;
 
     #[shared]
     struct Shared {}
@@ -57,7 +57,11 @@ mod app {
         let dp = ctx.device;
 
         let rcc = dp.RCC.constrain();
-        let clocks = rcc.cfgr.use_hse(8.MHz()).sysclk(48.MHz()).freeze();
+        let clocks = rcc
+            .cfgr
+            .use_hse(8.MHz())
+            .sysclk(100.MHz())
+            .freeze();
 
         let mono = dp.TIM2.monotonic_us(&clocks);
 
@@ -100,11 +104,7 @@ mod app {
             .self_powered(true)
             .build();
 
-        // exit QEMU
-        // NOTE do not run this on hardware; it can corrupt OpenOCD state
-        dbg::exit!();
-
-        // plm::spawn().unwrap();
+        plm::spawn().unwrap();
 
         dbg::println!("init end");
         (
@@ -119,7 +119,7 @@ mod app {
         )
     }
 
-    #[task(binds = OTG_FS, local = [usb_dev, usb_comm])]
+    #[task(binds = OTG_FS, priority = 2, local = [usb_dev, usb_comm])]
     fn usb(ctx: usb::Context) {
         let usb::LocalResources { usb_dev, usb_comm } = ctx.local;
 
@@ -142,7 +142,7 @@ mod app {
         }
     }
 
-    #[task(local = [st7580_driver, should_init: bool = true])]
+    #[task(priority = 1, local = [st7580_driver, should_init: bool = true])]
     fn plm(ctx: plm::Context) {
         let plm::LocalResources {
             st7580_driver: driver,
@@ -162,9 +162,8 @@ mod app {
         plm::spawn_after(1.secs()).unwrap();
     }
 
-    #[task(binds = USART1,  local = [st7580_interrupt_handler])]
+    #[task(binds = USART1, priority = 2, local = [st7580_interrupt_handler])]
     fn usart1(ctx: usart1::Context) {
-        dbg::println!("interrupt handler for PLM");
         ctx.local.st7580_interrupt_handler.handle();
     }
 }

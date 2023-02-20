@@ -140,6 +140,7 @@ impl InterruptHandler {
                 } else {
                     self.ack_tx_value = Some(NAK);
                 }
+                globals::TX_ACTIVE.set();
                 serial.listen(Event::Txe);
                 self.rx_state = RxIrqStatus::FirstByte;
             }
@@ -157,7 +158,10 @@ impl InterruptHandler {
 
         match self.tx_state {
             TxIrqStatus::SendStx => {
-                self.tx_frame = self.tx_frame_queue.dequeue().unwrap();
+                self.tx_frame = self
+                    .tx_frame_queue
+                    .dequeue()
+                    .expect("entered TX ISR without TX frame queued");
                 serial.write(self.tx_frame.stx).unwrap();
                 self.tx_state = TxIrqStatus::SendLength;
             }
@@ -188,6 +192,7 @@ impl InterruptHandler {
                 self.tx_state = TxIrqStatus::TxDone;
             }
             TxIrqStatus::TxDone => {
+                globals::TX_ACTIVE.reset();
                 serial.unlisten(Event::Txe);
                 if self.ack_tx_value.is_some() {
                     self.ack_tx_value = None;
@@ -207,7 +212,7 @@ impl InterruptHandler {
             self.rx(serial);
         }
 
-        if serial.is_tx_empty() {
+        if serial.is_tx_empty() && globals::TX_ACTIVE.check() {
             self.tx(serial);
         }
     }

@@ -8,7 +8,7 @@ use stm32f4xx_hal as hal;
 
 pub struct Driver {
     resetn: PA8<Output<PushPull>>,
-    pub delay: DelayUs<pac::TIM5>,
+    pub delay: DelayUs<pac::TIM3>,
 
     #[allow(unused)]
     tx_on: PC0<Input>,
@@ -31,14 +31,14 @@ impl Driver {
         resetn: PA8<Output<PushPull>>,
         tx_on: PC0<Input>,
         rx_on: PC1<Input>,
-        tim5: pac::TIM5,
+        tim3: pac::TIM3,
         clocks: &rcc::Clocks,
     ) -> Self {
         Self {
             resetn: resetn.internal_resistor(Pull::None).speed(Speed::VeryHigh),
             tx_on: tx_on.internal_resistor(Pull::None),
             rx_on: rx_on.internal_resistor(Pull::None),
-            delay: tim5.delay_us(clocks),
+            delay: tim3.delay_us(clocks),
             ind_frame_queue: unsafe { globals::FRAME_QUEUE.split() }.1,
             cnf_frame_queue: unsafe { globals::TX_FRAME.split() }.1,
             tx_frame_queue: unsafe { globals::TX_FRAME.split() }.0,
@@ -51,7 +51,6 @@ impl Driver {
     }
 
     pub fn init(&mut self) {
-        crate::dbg::println!("initializing PLM");
         self.resetn.set_low();
         self.delay.delay(1500.millis());
         self.resetn.set_high();
@@ -63,7 +62,6 @@ impl Driver {
                 .dequeue()
                 .map_or(false, |f| f.command == CMD_RESET_IND)
             {
-                crate::dbg::println!("PLM is now initialized");
                 return;
             }
         }
@@ -85,7 +83,7 @@ impl Driver {
         assert!(buf.len() < 255);
         let mut data = [0; 255];
         data[0] = idx;
-        data[1..buf.len()].clone_from_slice(buf);
+        data[1..buf.len() + 1].clone_from_slice(buf);
         let tx_frame =
             Frame::new(STX_02, buf.len() as u8 + 1, CMD_MIB_WRITE_REQ, data);
 
@@ -216,7 +214,7 @@ impl Driver {
             offset += 1;
         }
 
-        data[offset..send_buf.len()].clone_from_slice(send_buf);
+        data[offset..send_buf.len() + offset].clone_from_slice(send_buf);
 
         let tx_frame = Frame::new(STX_02, send_buf.len() as u8 + 1, REQ, data);
 
@@ -274,7 +272,7 @@ impl Driver {
         data[offset] = clr_len;
         offset += 1;
 
-        data[offset..send_buf.len()].clone_from_slice(send_buf);
+        data[offset..send_buf.len() + offset].clone_from_slice(send_buf);
 
         let tx_frame =
             Frame::new(STX_02, send_buf.len() as u8 + 2, CMD_SS_DATA_REQ, data);
@@ -309,9 +307,12 @@ impl Driver {
         self.cmd_tmo.set(CMD_TMO);
         loop {
             if let Some(f) = self.cnf_frame_queue.dequeue() {
+                self.cmd_tmo.clear();
                 return Ok(f);
             }
             if self.cmd_tmo.is_expired() {
+                self.cmd_tmo.clear();
+                crate::dbg::println!("cmd_tmo has expired");
                 return Err(StErr::ErrTimeout);
             }
         }
@@ -334,6 +335,7 @@ impl Driver {
                 }
 
                 if self.status_msg_tmo.is_expired() {
+                    crate::dbg::println!("status_msg_tmo has expired");
                     unsafe { globals::T_REQ_PIN.as_mut() }.unwrap().set_high();
                     self.sf_state = TxStatus::TxreqLow;
                     globals::WAIT_STATUS.reset();
@@ -374,6 +376,7 @@ impl Driver {
                 }
 
                 if self.ack_tmo.is_expired() {
+                    crate::dbg::println!("ack_tmo has expired");
                     self.sf_state = TxStatus::TxreqLow;
                     globals::WAIT_ACK.reset();
                     self.sf_first_iter = true;

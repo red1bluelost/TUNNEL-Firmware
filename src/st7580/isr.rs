@@ -54,6 +54,7 @@ impl InterruptHandler {
     ) {
         // First check whether a timeout is expired or not
         if self.ic_timeout.is_expired() {
+            crate::dbg::println!("ic_timeout has expired");
             self.rx_state = RxIrqStatus::FirstByte;
         }
 
@@ -140,6 +141,7 @@ impl InterruptHandler {
                 } else {
                     self.ack_tx_value = Some(NAK);
                 }
+                self.ic_timeout.clear();
                 globals::TX_ACTIVE.set();
                 serial.listen(Event::Txe);
                 self.rx_state = RxIrqStatus::FirstByte;

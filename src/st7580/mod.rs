@@ -76,12 +76,12 @@ impl Builder {
         .unwrap();
         unsafe { globals::SERIAL_PLM.replace(serial_plm) };
 
-        let counter = tim3.counter(clocks);
+        let counter = tim5.monotonic(clocks);
         unsafe { globals::COUNTER.replace(counter) };
 
         let isr = InterruptHandler::new();
 
-        let driver = Driver::new(resetn, tx_on, rx_on, tim5, clocks);
+        let driver = Driver::new(resetn, tx_on, rx_on, tim3, clocks);
 
         (driver, isr)
     }

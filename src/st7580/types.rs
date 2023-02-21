@@ -77,11 +77,16 @@ pub struct Timeout {
 
 impl Timeout {
     pub fn is_expired(&self) -> bool {
-        let now = super::globals::now();
         let Timeout {
             tmo,
             tmo_start_time,
         } = *self;
+        if tmo == 0 {
+            return false;
+        }
+
+        let now = super::globals::now();
+
         let elapse = if now >= tmo_start_time {
             now - tmo_start_time
         } else {
@@ -95,5 +100,9 @@ impl Timeout {
             tmo,
             tmo_start_time: super::globals::now(),
         };
+    }
+
+    pub fn clear(&mut self) {
+        *self = Default::default();
     }
 }

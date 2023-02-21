@@ -137,11 +137,13 @@ mod app {
             dbg::println!("plm init");
             driver.init();
 
+            dbg::println!("plm modem conf");
             driver
                 .mib_write(st7580::MIB_MODEM_CONF, &st7580::MODEM_CONFIG)
                 .unwrap();
             driver.delay.delay(500.millis());
 
+            dbg::println!("plm phy conf");
             driver
                 .mib_write(st7580::MIB_PHY_CONF, &st7580::PHY_CONFIG)
                 .unwrap();

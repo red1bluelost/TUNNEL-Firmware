@@ -2,12 +2,12 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug TUNNEL",
+            "name": "Debug testing",
             "request": "launch",
             "servertype": "openocd",
             "type": "cortex-debug",
             "cwd": "${workspaceRoot}",
-            "executable": "./target/thumbv7em-none-eabihf/debug/tunnel_firmware",
+            "executable": "./target/thumbv7em-none-eabihf/debug/testing",
             "configFiles": [
                 "openocd.cfg"
             ],

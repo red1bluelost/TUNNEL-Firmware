@@ -57,11 +57,7 @@ mod app {
         let dp = ctx.device;
 
         let rcc = dp.RCC.constrain();
-        let clocks = rcc
-            .cfgr
-            .use_hse(8.MHz())
-            .sysclk(100.MHz())
-            .freeze();
+        let clocks = rcc.cfgr.use_hse(8.MHz()).sysclk(100.MHz()).freeze();
 
         let mono = dp.TIM2.monotonic_us(&clocks);
 
@@ -154,8 +150,17 @@ mod app {
         if *should_init {
             dbg::println!("plm init");
             driver.init();
-            todo!("Modem MIBs configuration");
-            todo!("Phy MIBs configuration");
+
+            driver
+                .mib_write(st7580::MIB_MODEM_CONF, &st7580::MODEM_CONFIG)
+                .unwrap();
+            driver.delay.delay(500.millis());
+
+            driver
+                .mib_write(st7580::MIB_PHY_CONF, &st7580::PHY_CONFIG)
+                .unwrap();
+            driver.delay.delay(500.millis());
+
             *should_init = false;
         }
 

@@ -8,7 +8,7 @@ use stm32f4xx_hal as hal;
 
 pub struct Driver {
     resetn: PA8<Output<PushPull>>,
-    delay: DelayUs<pac::TIM5>,
+    pub delay: DelayUs<pac::TIM5>,
 
     #[allow(unused)]
     tx_on: PC0<Input>,

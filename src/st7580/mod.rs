@@ -1,6 +1,6 @@
 //! Code relating to the ST7580 chip
 
-mod constants;
+pub mod constants;
 pub mod driver;
 pub mod frame;
 mod globals;
@@ -19,6 +19,7 @@ use hal::{
 use stm32f4xx_hal as hal;
 
 /// All the re-exports
+pub use constants::*;
 pub use driver::*;
 pub use frame::*;
 pub use isr::*;

@@ -4,6 +4,42 @@ pub const TXFREQS: [u8; 3] = [0, 0, 0];
 #[cfg(feature = "GAIN_SELECTOR")]
 pub const TXGAIN: u8 = 0;
 
+/// ST7580 PHY configuration parameters fitting
+pub const PHY_CONFIG: [u8; 14] = [
+    0x01, 0xC9, 0x08, 0x01, 0x8E, 0x70, 0x0E, 0x15, 0x00, 0x00, 0x02, 0x35,
+    0x9B, 0x58,
+];
+
+/// ST7580 MODEM configuration parameters fitting
+/// Use PHY data
+#[cfg(any())]
+pub const MODEM_CONFIG: [u8; 1] = [0x00];
+/// Use DL data
+#[cfg(all())]
+pub const MODEM_CONFIG: [u8; 1] = [0x11];
+
+/// MIBs Objects
+/// Modem configuration MIB
+pub const MIB_MODEM_CONF: u8 = 0x00;
+/// PHY configuration MIB
+pub const MIB_PHY_CONF: u8 = 0x01;
+/// SS key MIB
+pub const MIB_SS_KEY: u8 = 0x02;
+/// Last data indication MIB
+pub const MIB_LAST_DATA_IND: u8 = 0x04;
+/// Last TX confirm MIB
+pub const MIB_LAST_TX_CNF: u8 = 0x05;
+/// PHY Data MIB
+pub const MIB_PHY_DATA: u8 = 0x06;
+/// DL Data MIB
+pub const MIB_DL_DATA: u8 = 0x07;
+/// SS Data MIB
+pub const MIB_SS_DATA: u8 = 0x08;
+/// Host interface timeout MIB
+pub const MIB_HOST_IF_TOUT: u8 = 0x09;
+/// Firmware version MIB
+pub const MIB_FW_VERSION: u8 = 0x0A;
+
 /// Acknowledgement codes
 pub const ACK: u8 = 0x06;
 pub const NAK: u8 = 0x15;

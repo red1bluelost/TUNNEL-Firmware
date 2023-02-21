@@ -1,3 +1,4 @@
+#[macro_export]
 macro_rules! init {
     () => {
         #[cfg(feature = "RTT")]
@@ -5,6 +6,7 @@ macro_rules! init {
     };
 }
 
+#[macro_export]
 macro_rules! println {
     ($($arg:tt)*) => {
         #[cfg(feature = "RTT")]
@@ -15,7 +17,7 @@ macro_rules! println {
     };
 }
 
-#[allow(unused)]
+#[macro_export]
 macro_rules! exit {
     () => {
         #[cfg(feature = "QEMU")]
@@ -23,5 +25,4 @@ macro_rules! exit {
     };
 }
 
-#[allow(unused)]
-pub(crate) use {exit, init, println};
+pub use {exit, init, println};

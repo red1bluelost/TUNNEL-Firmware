@@ -9,7 +9,10 @@ mod types;
 
 /// Code use from the HAL
 use hal::{
-    gpio::*,
+    gpio::{
+        Alternate, Input, Output, Pull, PushPull, Speed, PA10, PA5, PA8, PA9,
+        PC0, PC1,
+    },
     pac,
     prelude::*,
     rcc,

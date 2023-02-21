@@ -1,35 +1,21 @@
 #![no_main]
 #![no_std]
 
-#[cfg(feature = "RTT")]
-use panic_rtt_target as _;
-
-#[cfg(feature = "HALT")]
-use panic_halt as _;
-
-#[cfg(feature = "QEMU")]
-use panic_semihosting as _;
-
-mod dbg;
-pub mod signal;
-pub mod st7580;
-
 #[rtic::app(
     device = hal::pac,
     peripherals = true,
     dispatchers = [SPI1, SPI2, SPI3]
 )]
 mod app {
-    use crate::dbg;
-    use crate::st7580;
     use hal::{
-        gpio::*,
         otg_fs::{UsbBus, UsbBusType, USB},
         pac,
         prelude::*,
         timer,
     };
     use stm32f4xx_hal as hal;
+    use tunnel_firmware::dbg;
+    use tunnel_firmware::st7580;
     use usb_device::prelude::*;
     use usbd_serial::SerialPort;
 

@@ -1,6 +1,10 @@
 use super::*;
 use crate::signal::Signal;
-use hal::{gpio::*, serial::Serial1, timer::CounterUs};
+use hal::{
+    gpio::{Alternate, PA10, PA9},
+    serial::Serial1,
+    timer::CounterUs,
+};
 use heapless::{
     mpmc::Q2,
     spsc::{Consumer, Producer, Queue},

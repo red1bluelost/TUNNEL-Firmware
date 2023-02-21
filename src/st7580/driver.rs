@@ -1,6 +1,6 @@
 use super::{constants::*, frame::*, globals, types::*};
 use hal::{
-    gpio::*,
+    gpio::{Input, Output, Pull, PushPull, Speed, PA8, PC0, PC1},
     pac, rcc, serial,
     timer::{DelayUs, ExtU32, TimerExt},
 };

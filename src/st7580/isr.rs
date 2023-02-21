@@ -1,7 +1,7 @@
 use super::{constants::*, frame::*, globals, types::*};
 use cortex_m::prelude::*;
 use hal::{
-    gpio::*,
+    gpio::{Alternate, PA10, PA9},
     serial::{Event, RxISR, Serial1, TxISR},
 };
 use stm32f4xx_hal as hal;

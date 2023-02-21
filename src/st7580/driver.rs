@@ -134,6 +134,12 @@ impl Driver {
         }
     }
 
+    /// Ping ST7580 PLC Modem.
+    ///
+    /// # Arguments
+    ///
+    /// * `buf` - buffer containing ping test data to be sent. If ping is
+    ///   success ST7580 PLC Modem will reply with the same data.
     pub fn ping(&mut self, buf: &[u8]) -> StResult<()> {
         assert!(buf.len() < 255);
         let mut data = [0; 255];

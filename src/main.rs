@@ -164,7 +164,11 @@ mod app {
             *should_init = false;
         }
 
-        plm::spawn_after(1.secs()).unwrap();
+        let buf = "hello st7580".as_bytes();
+        driver.ping(buf).unwrap();
+        dbg::println!("successfully pinged the st7580");
+
+        plm::spawn_after(5.secs()).unwrap();
     }
 
     #[task(binds = USART1, priority = 2, local = [st7580_interrupt_handler])]

@@ -38,6 +38,7 @@ pub const CMD_RESET_CNF: u8 = 0x3D;
 /// Reset indication command
 pub const CMD_RESET_IND: u8 = 0x3E;
 /// Reset error command code
+#[allow(unused)]
 pub const CMD_RESET_ERR: u8 = 0x3F;
 
 /// MIB Write request command

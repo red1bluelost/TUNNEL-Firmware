@@ -15,6 +15,7 @@ macro_rules! println {
     };
 }
 
+#[allow(unused)]
 macro_rules! exit {
     () => {
         #[cfg(feature = "QEMU")]
@@ -22,4 +23,5 @@ macro_rules! exit {
     };
 }
 
+#[allow(unused)]
 pub(crate) use {exit, init, println};

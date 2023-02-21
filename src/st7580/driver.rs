@@ -1,5 +1,4 @@
 use super::{constants::*, frame::*, globals, types::*};
-use cortex_m::prelude::*;
 use hal::{
     gpio::*,
     pac, rcc, serial,

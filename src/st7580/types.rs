@@ -39,8 +39,10 @@ impl TryFrom<u8> for StErr {
 
 pub type StResult<T> = core::result::Result<T, StErr>;
 
+pub type NbStResult<T> = nb::Result<T, StErr>;
+
 /// Frame tx High Level state machine states.
-pub enum TxStatus {
+pub(super) enum TxStatus {
     TxreqLow,
     WaitStatusFrame,
     WaitTxFrameDone,
@@ -48,7 +50,7 @@ pub enum TxStatus {
 }
 
 ///  Frame Tx Interrupt Level state machine states.
-pub enum TxIrqStatus {
+pub(super) enum TxIrqStatus {
     SendStx,
     SendLength,
     SendCommand,
@@ -59,7 +61,7 @@ pub enum TxIrqStatus {
 }
 
 /// Rx frame state machine states
-pub enum RxIrqStatus {
+pub(super) enum RxIrqStatus {
     FirstByte,
     StatusValue,
     Length,
@@ -70,13 +72,13 @@ pub enum RxIrqStatus {
 }
 
 #[derive(Default, Debug, Clone, Copy)]
-pub struct Timeout {
+pub(super) struct Timeout {
     tmo: u32,
     tmo_start_time: u32,
 }
 
 impl Timeout {
-    pub fn is_expired(&self) -> bool {
+    pub(super) fn is_expired(&self) -> bool {
         let Timeout {
             tmo,
             tmo_start_time,
@@ -95,14 +97,14 @@ impl Timeout {
         elapse >= tmo
     }
 
-    pub fn set(&mut self, tmo: u32) {
+    pub(super) fn set(&mut self, tmo: u32) {
         *self = Timeout {
             tmo,
             tmo_start_time: super::globals::now(),
         };
     }
 
-    pub fn clear(&mut self) {
+    pub(super) fn clear(&mut self) {
         *self = Default::default();
     }
 }

@@ -1,7 +1,6 @@
 #![no_std]
 
 pub mod dbg;
-pub mod signal;
 pub mod st7580;
 
 #[cfg(feature = "RTT")]

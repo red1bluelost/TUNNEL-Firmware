@@ -319,67 +319,65 @@ impl Driver {
         }
     }
 
-    fn send_frame(&mut self) -> nb::Result<(), StErr> {
-        use nb::Error::{Other, WouldBlock};
+    fn send_frame(&mut self) -> NbStResult<()> {
+        use nb::Error::WouldBlock;
         match self.sf_state {
             TxStatus::TxreqLow => {
-                globals::LOCAL_FRAME_TX.reset();
+                globals::LOCAL_FRAME_TX.dequeue();
                 globals::STATUS_VALUE.dequeue();
                 unsafe { globals::T_REQ_PIN.as_mut() }.unwrap().set_low();
                 self.status_msg_tmo.set(STATUS_MSG_TMO);
-                globals::WAIT_STATUS.set();
+                globals::WAIT_STATUS.enqueue(()).unwrap();
                 self.sf_state = TxStatus::WaitStatusFrame;
                 Err(WouldBlock)
             }
+            TxStatus::WaitStatusFrame if self.status_msg_tmo.is_expired() => {
+                unsafe { globals::T_REQ_PIN.as_mut() }.unwrap().set_high();
+                self.sf_state = TxStatus::TxreqLow;
+                globals::WAIT_STATUS.dequeue();
+                Err(StErr::TxErrNoStatus.into())
+            }
             TxStatus::WaitStatusFrame => {
-                if self.status_msg_tmo.is_expired() {
-                    unsafe { globals::T_REQ_PIN.as_mut() }.unwrap().set_high();
-                    self.sf_state = TxStatus::TxreqLow;
-                    globals::WAIT_STATUS.reset();
-                    return Err(Other(StErr::TxErrNoStatus));
-                }
-
-                let Some(status) = globals::STATUS_VALUE.dequeue() else { return Err(WouldBlock) };
+                let status = globals::STATUS_VALUE.dequeue();
+                let Some(status) = status else { return Err(WouldBlock) };
 
                 if status & BUSY_MASK != 0 {
                     unsafe { globals::T_REQ_PIN.as_mut() }.unwrap().set_high();
                     self.sf_state = TxStatus::TxreqLow;
-                    Err(Other(StErr::TxErrBusy))
+                    Err(StErr::TxErrBusy.into())
                 } else {
                     self.sf_state = TxStatus::WaitTxFrameDone;
-                    globals::TX_ACTIVE.set();
+                    globals::TX_ACTIVE.enqueue(()).unwrap();
                     unsafe { globals::SERIAL_PLM.as_mut() }
                         .unwrap()
                         .listen(serial::Event::Txe);
                     Err(WouldBlock)
                 }
             }
-            TxStatus::WaitTxFrameDone => {
-                if globals::LOCAL_FRAME_TX.check() {
-                    self.ack_tmo.set(ACK_TMO);
-                    globals::WAIT_ACK.set();
-                    self.sf_state = TxStatus::WaitAck;
-                }
+            TxStatus::WaitTxFrameDone
+                if globals::LOCAL_FRAME_TX.dequeue().is_some() =>
+            {
+                self.ack_tmo.set(ACK_TMO);
+                globals::WAIT_ACK.enqueue(()).unwrap();
+                self.sf_state = TxStatus::WaitAck;
                 Err(WouldBlock)
             }
+            TxStatus::WaitTxFrameDone => Err(WouldBlock),
+            TxStatus::WaitAck if self.ack_tmo.is_expired() => {
+                self.sf_state = TxStatus::TxreqLow;
+                globals::WAIT_ACK.dequeue();
+                Err(StErr::TxErrAckTmo.into())
+            }
             TxStatus::WaitAck => {
-                if self.ack_tmo.is_expired() {
-                    self.sf_state = TxStatus::TxreqLow;
-                    globals::WAIT_ACK.reset();
-                    return Err(Other(StErr::TxErrAckTmo));
-                }
-
-                let ack = match globals::ACK_RX_VALUE.dequeue() {
-                    Some(a) => a,
-                    None => return Err(WouldBlock),
-                };
+                let ack = globals::ACK_RX_VALUE.dequeue();
+                let Some(ack) = ack else { return Err(WouldBlock) };
 
                 self.sf_state = TxStatus::TxreqLow;
-                globals::WAIT_ACK.reset();
+                globals::WAIT_ACK.dequeue();
                 if ack == ACK {
                     Ok(())
                 } else {
-                    Err(Other(StErr::TxErrNak))
+                    Err(StErr::TxErrNak.into())
                 }
             }
         }

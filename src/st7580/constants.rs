@@ -152,3 +152,17 @@ impl IndicationValue for u8 {
         )
     }
 }
+
+pub trait AckValue {
+    fn as_ack(self) -> u8;
+}
+
+impl AckValue for bool {
+    fn as_ack(self) -> u8 {
+        if self {
+            ACK
+        } else {
+            NAK
+        }
+    }
+}

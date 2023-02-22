@@ -1,5 +1,4 @@
 use super::*;
-use crate::signal::Signal;
 use hal::{
     gpio::{Alternate, PA10, PA9},
     serial::Serial1,
@@ -31,7 +30,7 @@ pub fn now() -> u32 {
 pub static STATUS_VALUE: Q2<u8> = Q2::new();
 pub static ACK_RX_VALUE: Q2<u8> = Q2::new();
 
-pub static WAIT_ACK: Signal = Signal::new();
-pub static WAIT_STATUS: Signal = Signal::new();
-pub static LOCAL_FRAME_TX: Signal = Signal::new();
-pub static TX_ACTIVE: Signal = Signal::new();
+pub static LOCAL_FRAME_TX: Q2<()> = Q2::new();
+pub static WAIT_ACK: Q2<()> = Q2::new();
+pub static WAIT_STATUS: Q2<()> = Q2::new();
+pub static TX_ACTIVE: Q2<()> = Q2::new();

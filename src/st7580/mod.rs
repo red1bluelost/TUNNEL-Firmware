@@ -5,6 +5,7 @@ pub mod driver;
 pub mod frame;
 mod globals;
 pub mod isr;
+mod signal;
 mod types;
 
 /// Code use from the HAL

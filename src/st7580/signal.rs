@@ -1,34 +1,27 @@
-pub struct Signal {
-    inner: core::cell::RefCell<bool>,
+use heapless::mpmc::Q2;
+
+pub(super) struct Signal {
+    inner: Q2<()>,
 }
 
 unsafe impl Sync for Signal {}
 
-/// I recognizes that this is bad, not good, and very uncool. I don't have time
-/// to decipher the gross C code I'm attempting to port. As such, this hack
-/// will remain until I have the time, patiences, and courage to do it better.
-/// (So this is here to stay basically because I doubt I will rewrite.)
+/// This could be better but at least it ain't the last thing (that was bad)
 impl Signal {
-    pub const fn new() -> Self {
-        Self {
-            inner: core::cell::RefCell::new(false),
-        }
+    pub(super) const fn new() -> Self {
+        Self { inner: Q2::new() }
     }
 
     #[must_use]
-    pub fn check(&self) -> bool {
-        unsafe { core::ptr::read_volatile(self.inner.as_ptr()) }
+    pub(super) fn take_signal(&self) -> bool {
+        self.inner.dequeue().is_some()
     }
 
-    pub fn assign(&self, val: bool) {
-        unsafe { core::ptr::write_volatile(self.inner.as_ptr(), val) };
+    pub(super) fn clear(&self) {
+        self.inner.dequeue();
     }
 
-    pub fn set(&self) {
-        self.assign(true);
-    }
-
-    pub fn reset(&self) {
-        self.assign(false);
+    pub(super) fn set_signal(&self) {
+        self.inner.enqueue(()).ok();
     }
 }

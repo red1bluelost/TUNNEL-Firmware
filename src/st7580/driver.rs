@@ -323,18 +323,18 @@ impl Driver {
         use nb::Error::WouldBlock;
         match self.sf_state {
             TxStatus::TxreqLow => {
-                globals::LOCAL_FRAME_TX.dequeue();
+                globals::LOCAL_FRAME_TX.clear();
                 globals::STATUS_VALUE.dequeue();
                 unsafe { globals::T_REQ_PIN.as_mut() }.unwrap().set_low();
                 self.status_msg_tmo.set(STATUS_MSG_TMO);
-                globals::WAIT_STATUS.enqueue(()).unwrap();
+                globals::WAIT_STATUS.set_signal();
                 self.sf_state = TxStatus::WaitStatusFrame;
                 Err(WouldBlock)
             }
             TxStatus::WaitStatusFrame if self.status_msg_tmo.is_expired() => {
                 unsafe { globals::T_REQ_PIN.as_mut() }.unwrap().set_high();
                 self.sf_state = TxStatus::TxreqLow;
-                globals::WAIT_STATUS.dequeue();
+                globals::WAIT_STATUS.clear();
                 Err(StErr::TxErrNoStatus.into())
             }
             TxStatus::WaitStatusFrame => {
@@ -347,7 +347,7 @@ impl Driver {
                     Err(StErr::TxErrBusy.into())
                 } else {
                     self.sf_state = TxStatus::WaitTxFrameDone;
-                    globals::TX_ACTIVE.enqueue(()).unwrap();
+                    globals::TX_ACTIVE.set_signal();
                     unsafe { globals::SERIAL_PLM.as_mut() }
                         .unwrap()
                         .listen(serial::Event::Txe);
@@ -355,17 +355,17 @@ impl Driver {
                 }
             }
             TxStatus::WaitTxFrameDone
-                if globals::LOCAL_FRAME_TX.dequeue().is_some() =>
+                if globals::LOCAL_FRAME_TX.take_signal() =>
             {
                 self.ack_tmo.set(ACK_TMO);
-                globals::WAIT_ACK.enqueue(()).unwrap();
+                globals::WAIT_ACK.set_signal();
                 self.sf_state = TxStatus::WaitAck;
                 Err(WouldBlock)
             }
             TxStatus::WaitTxFrameDone => Err(WouldBlock),
             TxStatus::WaitAck if self.ack_tmo.is_expired() => {
                 self.sf_state = TxStatus::TxreqLow;
-                globals::WAIT_ACK.dequeue();
+                globals::WAIT_ACK.clear();
                 Err(StErr::TxErrAckTmo.into())
             }
             TxStatus::WaitAck => {
@@ -373,7 +373,7 @@ impl Driver {
                 let Some(ack) = ack else { return Err(WouldBlock) };
 
                 self.sf_state = TxStatus::TxreqLow;
-                globals::WAIT_ACK.dequeue();
+                globals::WAIT_ACK.clear();
                 if ack == ACK {
                     Ok(())
                 } else {

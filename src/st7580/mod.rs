@@ -79,7 +79,7 @@ impl Builder {
         unsafe { globals::SERIAL_PLM.replace(serial_plm) };
 
         let counter = tim5.monotonic(clocks);
-        unsafe { globals::COUNTER.replace(counter) };
+        globals::set_counter(counter);
 
         let isr = InterruptHandler::new();
 

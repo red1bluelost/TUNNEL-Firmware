@@ -62,11 +62,11 @@ impl InterruptHandler {
 
         match self.rx_state {
             RxIrqStatus::FirstByte => match c {
-                ACK | NAK if globals::WAIT_ACK.dequeue().is_some() => {
+                ACK | NAK if globals::WAIT_ACK.take_signal() => {
                     globals::ACK_RX_VALUE.enqueue(c).unwrap();
                 }
                 ACK | NAK => {
-                    globals::WAIT_STATUS.dequeue();
+                    globals::WAIT_STATUS.clear();
                 }
                 STX_02 | STX_03 => {
                     self.rx_frame.clear();
@@ -74,16 +74,16 @@ impl InterruptHandler {
                     self.ic_timeout.set(IC_TMO);
                     self.rx_state = RxIrqStatus::Length;
                 }
-                STX_STATUS if globals::WAIT_STATUS.dequeue().is_some() => {
+                STX_STATUS if globals::WAIT_STATUS.take_signal() => {
                     self.ic_timeout.set(IC_TMO);
                     self.rx_state = RxIrqStatus::StatusValue;
                 }
                 STX_STATUS => {
-                    globals::WAIT_ACK.dequeue();
+                    globals::WAIT_ACK.clear();
                 }
                 _ => {
-                    globals::WAIT_STATUS.dequeue();
-                    globals::WAIT_ACK.dequeue();
+                    globals::WAIT_STATUS.clear();
+                    globals::WAIT_ACK.clear();
                 }
             },
             RxIrqStatus::StatusValue => {
@@ -139,7 +139,7 @@ impl InterruptHandler {
                 }
 
                 self.ic_timeout.clear();
-                globals::TX_ACTIVE.enqueue(()).unwrap();
+                globals::TX_ACTIVE.set_signal();
                 serial.listen(Event::Txe);
                 self.rx_state = RxIrqStatus::FirstByte;
             }
@@ -162,7 +162,7 @@ impl InterruptHandler {
         }
 
         if !matches!(self.tx_state, TxIrqStatus::TxDone) {
-            globals::TX_ACTIVE.enqueue(()).unwrap();
+            globals::TX_ACTIVE.set_signal();
         }
 
         match self.tx_state {
@@ -202,7 +202,7 @@ impl InterruptHandler {
             }
             TxIrqStatus::TxDone => {
                 serial.unlisten(Event::Txe);
-                globals::LOCAL_FRAME_TX.enqueue(()).unwrap();
+                globals::LOCAL_FRAME_TX.set_signal();
                 self.tx_state = TxIrqStatus::SendStx;
                 self.tx_cur_idx = 0;
             }
@@ -216,7 +216,7 @@ impl InterruptHandler {
             self.rx(serial);
         }
 
-        if serial.is_tx_empty() && globals::TX_ACTIVE.dequeue().is_some() {
+        if serial.is_tx_empty() && globals::TX_ACTIVE.take_signal() {
             self.tx(serial);
         }
     }

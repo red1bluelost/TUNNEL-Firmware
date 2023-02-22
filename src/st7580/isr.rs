@@ -31,7 +31,7 @@ impl InterruptHandler {
             .listen(Event::Rxne);
         let ind_frame_queue = unsafe { globals::FRAME_QUEUE.split().0 };
         let cnf_frame_queue = unsafe { globals::CONFIRM_FRAME.split().0 };
-        let tx_frame_queue = unsafe { globals::CONFIRM_FRAME.split().1 };
+        let tx_frame_queue = unsafe { globals::TX_FRAME.split().1 };
         Self {
             ic_timeout: Default::default(),
             rx_state: RxIrqStatus::FirstByte,
@@ -64,6 +64,8 @@ impl InterruptHandler {
         match self.rx_state {
             RxIrqStatus::FirstByte => match c {
                 ACK | NAK => {
+                    crate::dbg::println!("rx first byte ACK|NAK");
+
                     if globals::WAIT_ACK.check() {
                         globals::ACK_RX_VALUE.enqueue(c).unwrap();
                         globals::WAIT_ACK.reset();
@@ -72,19 +74,28 @@ impl InterruptHandler {
                     }
                 }
                 STX_02 | STX_03 => {
+                    crate::dbg::println!("rx first byte STX_O2|STX_03");
+
+                    self.rx_frame.clear();
                     self.rx_frame.stx = c;
                     self.ic_timeout.set(IC_TMO);
                     self.rx_state = RxIrqStatus::Length;
                 }
+                STX_STATUS if globals::WAIT_STATUS.check() => {
+                    crate::dbg::println!(
+                        "rx first byte STX_STATUS: WAIT_STATUS = true"
+                    );
+                    self.ic_timeout.set(IC_TMO);
+                    self.rx_state = RxIrqStatus::StatusValue;
+                }
                 STX_STATUS => {
-                    if globals::WAIT_STATUS.check() {
-                        self.ic_timeout.set(IC_TMO);
-                        self.rx_state = RxIrqStatus::StatusValue;
-                    } else {
-                        globals::WAIT_ACK.reset();
-                    }
+                    crate::dbg::println!(
+                        "rx first byte STX_STATUS: WAIT_STATUS = false"
+                    );
+                    globals::WAIT_ACK.reset();
                 }
                 _ => {
+                    crate::dbg::println!("rx first byte: Unknown({:#X})", c);
                     globals::WAIT_STATUS.reset();
                     globals::WAIT_ACK.reset();
                 }
@@ -92,6 +103,7 @@ impl InterruptHandler {
             RxIrqStatus::StatusValue => {
                 globals::STATUS_VALUE.enqueue(c).unwrap();
                 globals::WAIT_STATUS.reset();
+                self.ic_timeout.clear();
                 self.rx_state = RxIrqStatus::FirstByte;
             }
             RxIrqStatus::Length => {
@@ -127,6 +139,7 @@ impl InterruptHandler {
             }
             RxIrqStatus::ChecksumMsb => {
                 self.rx_frame.checksum |= (c as u16) << 8;
+                crate::dbg::println!("RX Frame received: {:?}", self.rx_frame);
                 if self.rx_frame.checksum == self.rx_cksum {
                     if self.rx_frame.command.is_indication() {
                         self.ind_frame_queue
@@ -139,6 +152,7 @@ impl InterruptHandler {
                     }
                     self.ack_tx_value = Some(ACK);
                 } else {
+                    crate::dbg::println!("FRAME CHECKSUM FAILED");
                     self.ack_tx_value = Some(NAK);
                 }
                 self.ic_timeout.clear();
@@ -154,8 +168,19 @@ impl InterruptHandler {
         serial: &mut Serial1<(PA9<Alternate<7>>, PA10<Alternate<7>>), u8>,
     ) {
         if let Some(ack_tx) = self.ack_tx_value {
+            assert!(
+                matches!(self.tx_state, TxIrqStatus::SendStx)
+                    && matches!(self.tx_cur_idx, 0)
+            );
+            crate::dbg::println!(
+                "sending {}",
+                if ack_tx == NAK { "NAK" } else { "ACK" }
+            );
             serial.write(ack_tx).unwrap();
-            self.tx_state = TxIrqStatus::TxDone;
+            globals::TX_ACTIVE.reset();
+            serial.unlisten(Event::Txe);
+            self.ack_tx_value = None;
+            return;
         }
 
         match self.tx_state {
@@ -164,6 +189,9 @@ impl InterruptHandler {
                     .tx_frame_queue
                     .dequeue()
                     .expect("entered TX ISR without TX frame queued");
+
+                crate::dbg::println!("TX SENDING FRAME");
+
                 serial.write(self.tx_frame.stx).unwrap();
                 self.tx_state = TxIrqStatus::SendLength;
             }
@@ -194,13 +222,10 @@ impl InterruptHandler {
                 self.tx_state = TxIrqStatus::TxDone;
             }
             TxIrqStatus::TxDone => {
+                crate::dbg::println!("TX DONE");
                 globals::TX_ACTIVE.reset();
                 serial.unlisten(Event::Txe);
-                if self.ack_tx_value.is_some() {
-                    self.ack_tx_value = None;
-                } else {
-                    globals::LOCAL_FRAME_TX.check();
-                }
+                globals::LOCAL_FRAME_TX.check();
                 self.tx_state = TxIrqStatus::SendStx;
                 self.tx_cur_idx = 0;
             }

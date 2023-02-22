@@ -53,7 +53,8 @@ impl Builder {
             tim5,
         } = self;
 
-        let t_req = t_req.internal_resistor(Pull::None).speed(Speed::High);
+        let mut t_req = t_req.internal_resistor(Pull::None).speed(Speed::High);
+        t_req.set_high();
         unsafe { globals::T_REQ_PIN.replace(t_req) };
 
         let serial_plm = Serial::new(

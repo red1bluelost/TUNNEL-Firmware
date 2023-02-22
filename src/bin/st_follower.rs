@@ -180,23 +180,19 @@ mod app {
         let rx_frame = loop {
             match driver.receive_frame() {
                 Some(f)
-                    if f.stx == st7580::STX_03
-                        && *last_id_rcv == f.data[3 + TRIG_BUF_SIZE] =>
+                    if f.stx != st7580::STX_03
+                        || *last_id_rcv != f.data[3 + TRIG_BUF_SIZE] =>
                 {
-                    driver.delay.delay(200.millis());
-                }
-                Some(f) => {
                     *last_id_rcv = f.data[3 + TRIG_BUF_SIZE];
                     break f;
                 }
-                None => {
+                Some(_) | None => {
                     driver.delay.delay(200.millis());
                 }
             }
         };
 
-        rcv_buffer
-            .copy_from_slice(&rx_frame.data[4..rx_frame.length as usize]);
+        rcv_buffer.copy_from_slice(&rx_frame.data[4..rx_frame.length as usize]);
 
         let rcv_last = *rcv_buffer.last().unwrap();
         dbg::println!("Trigger Msg Received, ID: {}", rcv_last as char);
@@ -207,9 +203,8 @@ mod app {
         // Send back ACK Msg to Master Board
         *trs_buffer.last_mut().unwrap() = rcv_last;
         loop {
-            match driver.dl_data(DATA_OPT, trs_buffer, None) {
-                Ok(()) => break,
-                Err(_) => continue,
+            if driver.dl_data(DATA_OPT, trs_buffer, None).is_ok() {
+                break;
             }
         }
 

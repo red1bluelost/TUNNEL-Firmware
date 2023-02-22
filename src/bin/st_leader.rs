@@ -173,12 +173,14 @@ mod app {
             *should_init = false;
         }
 
-        // Initialize Trigger Msg
-        let last = trs_buffer.last_mut().unwrap();
-        *last = if *last >= b'Z' { b'A' } else { *last + 1 };
-
         dbg::println!("Iteration {}", *iter_cntr);
         *iter_cntr += 1;
+
+        // Initialize Trigger Msg
+        trs_buffer
+            .last_mut()
+            .map(|l| *l = if *l >= b'Z' { b'A' } else { *l + 1 })
+            .unwrap();
 
         // Send Trigger Msg send, Check TRIGGER Msg send result
         if let Err(ret) = driver.dl_data(DATA_OPT, trs_buffer, None) {
@@ -201,13 +203,9 @@ mod app {
         let rx_frame = loop {
             match driver.receive_frame() {
                 Some(f)
-                    if f.stx == st7580::STX_03
-                        && f.data[3 + ACK_BUF_SIZE] == *last_id_rcv =>
+                    if f.stx != st7580::STX_03
+                        || f.data[3 + ACK_BUF_SIZE] != *last_id_rcv =>
                 {
-                    try_cnt += 1;
-                    driver.delay.delay(200.millis());
-                }
-                Some(f) => {
                     *last_id_rcv = f.data[3 + ACK_BUF_SIZE];
                     break f;
                 }
@@ -217,7 +215,7 @@ mod app {
                     plm::spawn().unwrap();
                     return;
                 }
-                None => {
+                Some(_) | None => {
                     try_cnt += 1;
                     driver.delay.delay(200.millis());
                 }

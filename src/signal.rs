@@ -15,6 +15,7 @@ impl Signal {
         }
     }
 
+    #[must_use]
     pub fn check(&self) -> bool {
         unsafe { core::ptr::read_volatile(self.inner.as_ptr()) }
     }

@@ -302,8 +302,6 @@ impl Driver {
 
     /// Returns the confirmation frame or an error
     fn transmit_frame(&mut self, txf: Frame) -> StResult<Frame> {
-        crate::dbg::println!("enqueuing new frame:");
-        // crate::dbg::println!("{:?}", txf);
         self.tx_frame_queue.enqueue(txf).unwrap();
 
         nb::block!(self.send_frame())?;
@@ -316,7 +314,6 @@ impl Driver {
             }
             if self.cmd_tmo.is_expired() {
                 self.cmd_tmo.clear();
-                crate::dbg::println!("cmd_tmo has expired");
                 return Err(StErr::ErrTimeout);
             }
         }
@@ -336,7 +333,6 @@ impl Driver {
             }
             TxStatus::WaitStatusFrame => {
                 if self.status_msg_tmo.is_expired() {
-                    crate::dbg::println!("status_msg_tmo has expired");
                     unsafe { globals::T_REQ_PIN.as_mut() }.unwrap().set_high();
                     self.sf_state = TxStatus::TxreqLow;
                     globals::WAIT_STATUS.reset();
@@ -368,7 +364,6 @@ impl Driver {
             }
             TxStatus::WaitAck => {
                 if self.ack_tmo.is_expired() {
-                    crate::dbg::println!("ack_tmo has expired");
                     self.sf_state = TxStatus::TxreqLow;
                     globals::WAIT_ACK.reset();
                     return Err(Other(StErr::TxErrAckTmo));

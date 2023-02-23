@@ -56,16 +56,17 @@ impl Driver {
     }
 
     pub fn reset(&mut self) -> StResult<DSTag> {
-        let tx_frame = Frame::new(STX_02, 0, CMD_RESET_REQ, [0; 255]);
+        let tx_frame =
+            Frame::new(STX_02, 0, CMD_RESET_REQ, mem::alloc().unwrap());
 
         Ok(DSTag(tx_frame, SenderTag::Reset))
     }
 
     pub fn mib_write(&mut self, idx: u8, buf: &[u8]) -> StResult<DSTag> {
         assert!(buf.len() < 255);
-        let mut data = [0; 255];
-        data[0] = idx;
-        data[1..buf.len() + 1].clone_from_slice(buf);
+        let mut data = mem::alloc().unwrap();
+        data.push(idx).unwrap();
+        data.extend_from_slice(buf).unwrap();
         let tx_frame =
             Frame::new(STX_02, buf.len() as u8 + 1, CMD_MIB_WRITE_REQ, data);
 
@@ -97,9 +98,12 @@ impl Driver {
     */
 
     pub fn mib_erase(&mut self, idx: u8) -> StResult<DSTag> {
-        let mut data = [0; 255];
-        data[0] = idx;
-        let tx_frame = Frame::new(STX_02, 1, CMD_MIB_ERASE_REQ, data);
+        let tx_frame = Frame::new(
+            STX_02,
+            1,
+            CMD_MIB_ERASE_REQ,
+            mem::alloc_from_slice(&[idx]).unwrap(),
+        );
 
         Ok(DSTag(tx_frame, SenderTag::MibErase))
     }
@@ -112,9 +116,8 @@ impl Driver {
     ///   success ST7580 PLC Modem will reply with the same data.
     pub fn ping(&mut self, buf: mem::BufBox) -> StResult<DSTag> {
         assert!(buf.len() < 255);
-        let mut data = [0; 255];
-        data[..buf.len()].clone_from_slice(&buf);
-        let tx_frame = Frame::new(STX_02, buf.len() as u8, CMD_PING_REQ, data);
+        let data = mem::alloc_from_slice(&buf).unwrap();
+        let tx_frame = Frame::new(STX_02, data.len() as u8, CMD_PING_REQ, data);
 
         Ok(DSTag(tx_frame, SenderTag::Ping(buf)))
     }
@@ -153,24 +156,18 @@ impl Driver {
         if send_buf.len() > LEN_MAX {
             return Err(StErr::ErrArgs);
         }
-        let mut data = [0; 255];
-        let mut offset = 0;
-        data[offset] = plm_opts;
-        offset += 1;
+        let mut data = mem::alloc().unwrap();
+        data.push(plm_opts).unwrap();
 
         #[cfg(feature = "CUSTOM_MIB_FREQUENCY")]
         for val in TXFREQS {
-            data[offset] = val;
-            offset += 1;
+            data.push(val);
         }
 
         #[cfg(feature = "GAIN_SELECTOR")]
-        {
-            data[offset] = TXGAIN;
-            offset += 1;
-        }
+        data.push(TXGAIN);
 
-        data[offset..send_buf.len() + offset].clone_from_slice(&send_buf);
+        data.extend_from_slice(&send_buf).unwrap();
 
         let tx_frame = Frame::new(STX_02, send_buf.len() as u8 + 1, REQ, data);
 

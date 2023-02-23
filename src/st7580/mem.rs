@@ -19,6 +19,10 @@ pub fn alloc_init(buf: VecBuf) -> Option<BufBox> {
     POOL::alloc().map(|b| b.init(buf))
 }
 
+pub fn alloc_from_slice(s: &[u8]) -> Option<BufBox> {
+    alloc_init(VecBuf::from_slice(s).unwrap())
+}
+
 #[inline(always)]
 pub fn alloc() -> Option<BufBox> {
     alloc_init(VecBuf::new())

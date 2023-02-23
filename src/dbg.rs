@@ -13,7 +13,7 @@ macro_rules! println {
         rtt_target::rprintln!($($arg)*);
 
         #[cfg(feature = "QEMU")]
-        cortex_m_semihosting:: hprintln!($($arg)*);
+        cortex_m_semihosting::hprintln!($($arg)*);
     };
 }
 

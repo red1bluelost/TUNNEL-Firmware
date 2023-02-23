@@ -9,7 +9,6 @@ use stm32f4xx_hal as hal;
 pub struct InterruptHandler {
     ic_timeout: Timeout,
     rx_state: RxIrqStatus,
-    rx_cur_idx: u8,
     rx_cksum: u16,
     rx_frame: Frame,
 
@@ -35,7 +34,6 @@ impl InterruptHandler {
         Self {
             ic_timeout: Default::default(),
             rx_state: RxIrqStatus::FirstByte,
-            rx_cur_idx: 0,
             rx_cksum: 0,
             rx_frame: Default::default(),
             ind_frame_queue,
@@ -99,7 +97,7 @@ impl InterruptHandler {
             RxIrqStatus::Command => {
                 self.rx_frame.command = c;
                 self.rx_cksum += c as u16;
-                self.rx_cur_idx = 0;
+                self.rx_frame.data.clear();
                 self.ic_timeout.set(IC_TMO);
                 self.rx_state = if self.rx_frame.length == 0 {
                     RxIrqStatus::ChecksumLsb
@@ -108,11 +106,10 @@ impl InterruptHandler {
                 };
             }
             RxIrqStatus::Data => {
-                self.rx_frame.data[self.rx_cur_idx as usize] = c;
-                self.rx_cur_idx += 1;
+                self.rx_frame.data.push(c).unwrap();
                 self.rx_cksum += c as u16;
                 self.ic_timeout.set(IC_TMO);
-                if self.rx_frame.length == self.rx_cur_idx {
+                if self.rx_frame.length == self.rx_frame.data.len() as _ {
                     self.rx_state = RxIrqStatus::ChecksumLsb;
                 }
             }

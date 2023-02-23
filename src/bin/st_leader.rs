@@ -52,6 +52,9 @@ mod app {
         let gpioa = dp.GPIOA.split();
         let gpioc = dp.GPIOC.split();
 
+        static mut STBUF: [u8; 1 << 12] = [0; 1 << 12];
+        st7580::POOL::grow(unsafe { &mut STBUF });
+
         let (st7580_driver, st7580_dsender, st7580_interrupt_handler) =
             st7580::Builder {
                 t_req: gpioa.pa5.into_push_pull_output(),
@@ -65,9 +68,6 @@ mod app {
                 tim5: dp.TIM5,
             }
             .split(&clocks);
-
-        static mut STBUF: [u8; 1 << 10] = [0; 1 << 10];
-        st7580::POOL::grow(unsafe { &mut STBUF });
 
         let usb = USB {
             usb_global: dp.OTG_FS_GLOBAL,

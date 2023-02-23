@@ -23,7 +23,7 @@
 				"-f",
 				"openocd.cfg",
 				"-c",
-				"\"program target/thumbv7em-none-eabihf/debug/tunnel_firmware verify reset exit\""
+				"\"program target/thumbv7em-none-eabihf/debug/testing verify reset exit\""
 			],
 			"problemMatcher": {
 				"pattern": {

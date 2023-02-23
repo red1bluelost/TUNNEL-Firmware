@@ -1,14 +1,13 @@
 use super::{constants::*, frame::*, globals, mem, types::*};
 use hal::{
     gpio::{Input, Output, Pull, PushPull, Speed, PA8, PC0, PC1},
-    pac, rcc, serial,
-    timer::{DelayUs, ExtU32, TimerExt},
+    serial,
+    timer::{self, DelayUs, ExtU32},
 };
 use stm32f4xx_hal as hal;
 
 pub struct Driver {
     resetn: PA8<Output<PushPull>>,
-    pub delay: DelayUs<pac::TIM3>,
 
     #[allow(unused)]
     tx_on: PC0<Input>,
@@ -23,8 +22,6 @@ impl Driver {
         resetn: PA8<Output<PushPull>>,
         tx_on: PC0<Input>,
         rx_on: PC1<Input>,
-        tim3: pac::TIM3,
-        clocks: &rcc::Clocks,
     ) -> Self {
         let mut resetn =
             resetn.internal_resistor(Pull::None).speed(Speed::VeryHigh);
@@ -33,18 +30,17 @@ impl Driver {
             resetn,
             tx_on: tx_on.internal_resistor(Pull::None),
             rx_on: rx_on.internal_resistor(Pull::None),
-            delay: tim3.delay_us(clocks),
             ind_frame_queue: unsafe { globals::FRAME_QUEUE.split() }.1,
         }
     }
 
-    pub fn init(&mut self) {
+    pub fn init<TIM: timer::Instance>(&mut self, delay: &mut DelayUs<TIM>) {
         self.resetn.set_low();
-        self.delay.delay(1500.millis());
+        delay.delay(1500.millis());
         self.resetn.set_high();
 
         loop {
-            self.delay.delay(100.millis());
+            delay.delay(100.millis());
             if self
                 .ind_frame_queue
                 .dequeue()

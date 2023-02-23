@@ -38,7 +38,6 @@ pub struct Builder {
     pub usart: pac::USART1,
     pub usart_tx: PA9<Alternate<7>>,
     pub usart_rx: PA10<Alternate<7>>,
-    pub tim3: pac::TIM3,
     pub tim5: pac::TIM5,
 }
 
@@ -55,7 +54,6 @@ impl Builder {
             usart,
             usart_tx,
             usart_rx,
-            tim3,
             tim5,
         } = self;
 
@@ -88,7 +86,7 @@ impl Builder {
 
         let isr = InterruptHandler::new();
 
-        let driver = Driver::new(resetn, tx_on, rx_on, tim3, clocks);
+        let driver = Driver::new(resetn, tx_on, rx_on);
         let dsender = DSender::new();
 
         (driver, dsender, isr)

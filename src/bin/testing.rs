@@ -11,7 +11,7 @@ mod app {
         otg_fs::{UsbBus, UsbBusType, USB},
         pac,
         prelude::*,
-        timer,
+        timer::{self, DelayUs},
     };
     use heapless::pool::singleton::Pool;
     use stm32f4xx_hal as hal;
@@ -27,6 +27,7 @@ mod app {
     struct Local {
         usb_dev: UsbDevice<'static, UsbBusType>,
         usb_comm: SerialPort<'static, UsbBusType>,
+        delay: DelayUs<pac::TIM3>,
         st7580_interrupt_handler: st7580::InterruptHandler,
         st7580_driver: st7580::Driver,
         st7580_dsender: st7580::DSender,
@@ -62,10 +63,10 @@ mod app {
                 usart: dp.USART1,
                 usart_tx: gpioa.pa9.into_alternate(),
                 usart_rx: gpioa.pa10.into_alternate(),
-                tim3: dp.TIM3,
                 tim5: dp.TIM5,
             }
             .split(&clocks);
+        let delay = dp.TIM3.delay(&clocks);
 
         let usb = USB {
             usb_global: dp.OTG_FS_GLOBAL,
@@ -99,6 +100,7 @@ mod app {
             Local {
                 usb_dev,
                 usb_comm,
+                delay,
                 st7580_interrupt_handler,
                 st7580_driver,
                 st7580_dsender,
@@ -130,9 +132,15 @@ mod app {
         }
     }
 
-    #[task(priority = 1, local = [st7580_driver, st7580_dsender, should_init: bool = true])]
+    #[task(
+        priority = 1,
+        local = [
+            delay, st7580_driver, st7580_dsender, should_init: bool = true
+        ]
+    )]
     fn plm(ctx: plm::Context) {
         let plm::LocalResources {
+            delay,
             st7580_driver: driver,
             st7580_dsender: dsender,
             should_init,
@@ -142,7 +150,7 @@ mod app {
         // task being interrupt free.
         if *should_init {
             dbg::println!("plm init");
-            driver.init();
+            driver.init(delay);
 
             dbg::println!("plm modem conf");
             driver
@@ -150,7 +158,7 @@ mod app {
                 .and_then(|tag| dsender.enqueue(tag))
                 .and_then(|d| nb::block!(d.process()))
                 .unwrap();
-            driver.delay.delay(500.millis());
+            delay.delay(500.millis());
 
             dbg::println!("plm phy conf");
             driver
@@ -158,7 +166,7 @@ mod app {
                 .and_then(|tag| dsender.enqueue(tag))
                 .and_then(|d| nb::block!(d.process()))
                 .unwrap();
-            driver.delay.delay(500.millis());
+            delay.delay(500.millis());
 
             *should_init = false;
         }

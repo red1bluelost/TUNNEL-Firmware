@@ -390,7 +390,7 @@ impl DSender {
             SenderTag::Ping(buf) => {
                 if cnf_frame.command != CMD_PING_CNF {
                     Err(Other(cnf_frame.data[0].try_into().unwrap()))
-                } else if &cnf_frame.data[..buf.len()] != &buf[..buf.len()] {
+                } else if cnf_frame.data[..buf.len()] != buf[..buf.len()] {
                     Err(StErr::ErrPing.into())
                 } else {
                     Ok(())

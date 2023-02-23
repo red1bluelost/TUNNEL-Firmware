@@ -151,7 +151,7 @@ impl InterruptHandler {
                 matches!(self.tx_state, TxIrqStatus::SendStx)
                     && matches!(self.tx_cur_idx, 0)
             );
-            serial.write(ack_tx.as_ack()).unwrap();
+            serial.write(ack_tx.to_ack()).unwrap();
             serial.unlisten(Event::Txe);
             self.ack_tx_value = None;
             return;

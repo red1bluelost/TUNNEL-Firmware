@@ -344,11 +344,13 @@ impl DSender {
             }
             TxStatus::WaitCnf if self.cmd_tmo.is_expired() => {
                 self.cmd_tmo.clear();
+                self.sf_state = TxStatus::TxreqLow;
                 Err(StErr::ErrTimeout.into())
             }
             TxStatus::WaitCnf => {
                 self.cnf_frame_queue.dequeue().ok_or(WouldBlock).map(|f| {
                     self.cmd_tmo.clear();
+                    self.sf_state = TxStatus::TxreqLow;
                     f
                 })
             }

@@ -13,6 +13,7 @@ mod app {
         prelude::*,
         timer,
     };
+    use heapless::pool::singleton::Pool;
     use stm32f4xx_hal as hal;
     use tunnel_firmware::dbg;
     use tunnel_firmware::st7580;
@@ -64,6 +65,9 @@ mod app {
                 tim5: dp.TIM5,
             }
             .split(&clocks);
+
+        static mut STBUF: [u8; 1 << 10] = [0; 1 << 10];
+        st7580::POOL::grow(unsafe { &mut STBUF });
 
         let usb = USB {
             usb_global: dp.OTG_FS_GLOBAL,

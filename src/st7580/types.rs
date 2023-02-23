@@ -42,14 +42,28 @@ pub type StResult<T> = core::result::Result<T, StErr>;
 pub type NbStResult<T> = nb::Result<T, StErr>;
 
 /// Frame tx High Level state machine states.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum TxStatus {
     TxreqLow,
     WaitStatusFrame,
     WaitTxFrameDone,
     WaitAck,
+    WaitCnf,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum SenderTag {
+    Inactive,
+    Reset,
+    MibWrite,
+    MibErase,
+    Ping(usize, [u8; 255]),
+    DlData,
+    PhyData,
 }
 
 ///  Frame Tx Interrupt Level state machine states.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum TxIrqStatus {
     SendStx,
     SendLength,
@@ -61,6 +75,7 @@ pub(super) enum TxIrqStatus {
 }
 
 /// Rx frame state machine states
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum RxIrqStatus {
     FirstByte,
     StatusValue,

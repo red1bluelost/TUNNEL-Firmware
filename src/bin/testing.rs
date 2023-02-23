@@ -28,6 +28,7 @@ mod app {
         usb_comm: SerialPort<'static, UsbBusType>,
         st7580_interrupt_handler: st7580::InterruptHandler,
         st7580_driver: st7580::Driver,
+        st7580_dsender: st7580::DSender,
     }
 
     #[monotonic(binds = TIM2, default = true)]
@@ -50,18 +51,19 @@ mod app {
         let gpioa = dp.GPIOA.split();
         let gpioc = dp.GPIOC.split();
 
-        let (st7580_driver, st7580_interrupt_handler) = st7580::Builder {
-            t_req: gpioa.pa5.into_push_pull_output(),
-            resetn: gpioa.pa8.into_push_pull_output(),
-            tx_on: gpioc.pc0,
-            rx_on: gpioc.pc1,
-            usart: dp.USART1,
-            usart_tx: gpioa.pa9.into_alternate(),
-            usart_rx: gpioa.pa10.into_alternate(),
-            tim3: dp.TIM3,
-            tim5: dp.TIM5,
-        }
-        .split(&clocks);
+        let (st7580_driver, st7580_dsender, st7580_interrupt_handler) =
+            st7580::Builder {
+                t_req: gpioa.pa5.into_push_pull_output(),
+                resetn: gpioa.pa8.into_push_pull_output(),
+                tx_on: gpioc.pc0,
+                rx_on: gpioc.pc1,
+                usart: dp.USART1,
+                usart_tx: gpioa.pa9.into_alternate(),
+                usart_rx: gpioa.pa10.into_alternate(),
+                tim3: dp.TIM3,
+                tim5: dp.TIM5,
+            }
+            .split(&clocks);
 
         let usb = USB {
             usb_global: dp.OTG_FS_GLOBAL,
@@ -96,6 +98,7 @@ mod app {
                 usb_comm,
                 st7580_interrupt_handler,
                 st7580_driver,
+                st7580_dsender,
             },
             init::Monotonics(mono),
         )
@@ -124,10 +127,11 @@ mod app {
         }
     }
 
-    #[task(priority = 1, local = [st7580_driver, should_init: bool = true])]
+    #[task(priority = 1, local = [st7580_driver, st7580_dsender, should_init: bool = true])]
     fn plm(ctx: plm::Context) {
         let plm::LocalResources {
             st7580_driver: driver,
+            st7580_dsender: dsender,
             should_init,
         } = ctx.local;
 
@@ -140,12 +144,16 @@ mod app {
             dbg::println!("plm modem conf");
             driver
                 .mib_write(st7580::MIB_MODEM_CONF, &st7580::MODEM_CONFIG)
+                .and_then(|tag| dsender.enqueue(tag))
+                .and_then(|d| nb::block!(d.process()))
                 .unwrap();
             driver.delay.delay(500.millis());
 
             dbg::println!("plm phy conf");
             driver
                 .mib_write(st7580::MIB_PHY_CONF, &st7580::PHY_CONFIG)
+                .and_then(|tag| dsender.enqueue(tag))
+                .and_then(|d| nb::block!(d.process()))
                 .unwrap();
             driver.delay.delay(500.millis());
 
@@ -153,7 +161,11 @@ mod app {
         }
 
         let buf = "hello st7580".as_bytes();
-        driver.ping(buf).unwrap();
+        driver
+            .ping(buf)
+            .and_then(|tag| dsender.enqueue(tag))
+            .and_then(|d| nb::block!(d.process()))
+            .unwrap();
         dbg::println!("successfully pinged the st7580");
 
         plm::spawn_after(5.secs()).unwrap();

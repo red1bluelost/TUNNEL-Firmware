@@ -16,13 +16,6 @@ pub struct Driver {
     rx_on: PC1<Input>,
 
     ind_frame_queue: globals::FrameConsumer<{ globals::QUEUE_SIZE }>,
-    cnf_frame_queue: globals::FrameConsumer<2>,
-    tx_frame_queue: globals::FrameProducer<2>,
-
-    cmd_tmo: Timeout,
-    status_msg_tmo: Timeout,
-    ack_tmo: Timeout,
-    sf_state: TxStatus,
 }
 
 impl Driver {
@@ -42,12 +35,6 @@ impl Driver {
             rx_on: rx_on.internal_resistor(Pull::None),
             delay: tim3.delay_us(clocks),
             ind_frame_queue: unsafe { globals::FRAME_QUEUE.split() }.1,
-            cnf_frame_queue: unsafe { globals::CONFIRM_FRAME.split() }.1,
-            tx_frame_queue: unsafe { globals::TX_FRAME.split() }.0,
-            cmd_tmo: Default::default(),
-            status_msg_tmo: Default::default(),
-            ack_tmo: Default::default(),
-            sf_state: TxStatus::TxreqLow,
         }
     }
 
@@ -68,19 +55,13 @@ impl Driver {
         }
     }
 
-    pub fn reset(&mut self) -> StResult<()> {
+    pub fn reset(&mut self) -> StResult<DSTag> {
         let tx_frame = Frame::new(STX_02, 0, CMD_RESET_REQ, [0; 255]);
-
-        self.transmit_frame(tx_frame).and_then(|confirm_frame| {
-            if confirm_frame.command != CMD_RESET_CNF {
-                Err(StErr::ErrConfirm)
-            } else {
-                Ok(())
-            }
-        })
+    
+        Ok(DSTag(tx_frame, SenderTag::Reset))
     }
 
-    pub fn mib_write(&mut self, idx: u8, buf: &[u8]) -> StResult<()> {
+    pub fn mib_write(&mut self, idx: u8, buf: &[u8]) -> StResult<DSTag> {
         assert!(buf.len() < 255);
         let mut data = [0; 255];
         data[0] = idx;
@@ -88,15 +69,10 @@ impl Driver {
         let tx_frame =
             Frame::new(STX_02, buf.len() as u8 + 1, CMD_MIB_WRITE_REQ, data);
 
-        let confirm_frame = self.transmit_frame(tx_frame)?;
-
-        match confirm_frame.command {
-            CMD_MIB_WRITE_ERR => Err(confirm_frame.data[0].try_into().unwrap()),
-            CMD_MIB_WRITE_CNF => Ok(()),
-            _ => Err(StErr::ErrConfirm),
-        }
+        Ok(DSTag(tx_frame, SenderTag::MibWrite))
     }
 
+    /*
     pub fn mib_read(&mut self, idx: u8, buf: &mut [u8]) -> StResult<()> {
         let mut data = [0; 255];
         data[0] = idx;
@@ -118,19 +94,14 @@ impl Driver {
             _ => Err(StErr::ErrConfirm),
         }
     }
+    */
 
-    pub fn mib_erase(&mut self, idx: u8) -> StResult<()> {
+    pub fn mib_erase(&mut self, idx: u8) -> StResult<DSTag> {
         let mut data = [0; 255];
         data[0] = idx;
         let tx_frame = Frame::new(STX_02, 1, CMD_MIB_ERASE_REQ, data);
 
-        let confirm_frame = self.transmit_frame(tx_frame)?;
-
-        match confirm_frame.command {
-            CMD_MIB_ERASE_ERR => Err(confirm_frame.data[0].try_into().unwrap()),
-            CMD_MIB_ERASE_CNF => Ok(()),
-            _ => Err(StErr::ErrConfirm),
-        }
+        Ok(DSTag(tx_frame, SenderTag::MibErase))
     }
 
     /// Ping ST7580 PLC Modem.
@@ -139,51 +110,46 @@ impl Driver {
     ///
     /// * `buf` - buffer containing ping test data to be sent. If ping is
     ///   success ST7580 PLC Modem will reply with the same data.
-    pub fn ping(&mut self, buf: &[u8]) -> StResult<()> {
+    pub fn ping(&mut self, buf: &[u8]) -> StResult<DSTag> {
         assert!(buf.len() < 255);
         let mut data = [0; 255];
         data[..buf.len()].clone_from_slice(buf);
         let tx_frame = Frame::new(STX_02, buf.len() as u8, CMD_PING_REQ, data);
 
-        let confirm_frame = self.transmit_frame(tx_frame)?;
-
-        if confirm_frame.command != CMD_PING_CNF {
-            return Err(confirm_frame.data[0].try_into().unwrap());
-        }
-        if &confirm_frame.data[..buf.len()] != buf {
-            return Err(StErr::ErrPing);
-        }
-        Ok(())
+        Ok(DSTag(tx_frame, SenderTag::Ping(buf.len(), data)))
     }
 
-    pub fn phy_data(&mut self, plm_opts: u8, send_buf: &[u8]) -> StResult<()> {
-        self.impl_phy_dl_data::<
-            PHY_DATALEN_MAX,
-            CMD_PHY_DATA_REQ,
-            CMD_PHY_DATA_CNF,
-            CMD_PHY_DATA_ERR
-        >(plm_opts, send_buf)
-    }
-
-    pub fn dl_data(&mut self, plm_opts: u8, send_buf: &[u8]) -> StResult<()> {
-        self.impl_phy_dl_data::<
-            DL_DATALEN_MAX,
-            CMD_DL_DATA_REQ,
-            CMD_DL_DATA_CNF,
-            CMD_DL_DATA_ERR
-        >(plm_opts, send_buf)
-    }
-
-    fn impl_phy_dl_data<
-        const LEN_MAX: usize,
-        const REQ: u8,
-        const CNF: u8,
-        const ERR: u8,
-    >(
+    pub fn phy_data(
         &mut self,
         plm_opts: u8,
         send_buf: &[u8],
-    ) -> StResult<()> {
+    ) -> StResult<DSTag> {
+        self.impl_phy_dl_data::<PHY_DATALEN_MAX, CMD_PHY_DATA_REQ>(
+            plm_opts,
+            send_buf,
+            SenderTag::PhyData,
+        )
+    }
+
+    pub fn dl_data(
+        &mut self,
+        plm_opts: u8,
+        send_buf: &[u8],
+    ) -> StResult<DSTag> {
+        self.impl_phy_dl_data::<DL_DATALEN_MAX, CMD_DL_DATA_REQ>(
+            plm_opts,
+            send_buf,
+            SenderTag::DlData,
+        )
+    }
+
+    #[inline(always)]
+    fn impl_phy_dl_data<const LEN_MAX: usize, const REQ: u8>(
+        &mut self,
+        plm_opts: u8,
+        send_buf: &[u8],
+        tag: SenderTag,
+    ) -> StResult<DSTag> {
         if send_buf.len() > LEN_MAX {
             return Err(StErr::ErrArgs);
         }
@@ -208,17 +174,10 @@ impl Driver {
 
         let tx_frame = Frame::new(STX_02, send_buf.len() as u8 + 1, REQ, data);
 
-        let confirm_frame = self.transmit_frame(tx_frame)?;
-
-        if confirm_frame.command == ERR {
-            return Err(confirm_frame.data[0].try_into().unwrap());
-        }
-        if confirm_frame.command != CNF {
-            return Err(StErr::ErrConfirm);
-        }
-        Ok(())
+        Ok(DSTag(tx_frame, tag))
     }
 
+    /*
     pub fn ss_data(
         &mut self,
         plm_opts: u8,
@@ -270,33 +229,58 @@ impl Driver {
         }
         Ok(())
     }
+    */
 
     #[inline(always)]
     pub fn receive_frame(&mut self) -> Option<Frame> {
         self.ind_frame_queue.dequeue()
     }
+}
 
-    /// Returns the confirmation frame or an error
-    fn transmit_frame(&mut self, txf: Frame) -> StResult<Frame> {
-        self.tx_frame_queue.enqueue(txf).unwrap();
+pub struct DSTag(Frame, SenderTag);
 
-        nb::block!(self.send_frame())?;
+pub struct DSender {
+    sf_state: TxStatus,
+    tag: SenderTag,
 
-        self.cmd_tmo.set(CMD_TMO);
-        loop {
-            if let Some(f) = self.cnf_frame_queue.dequeue() {
-                self.cmd_tmo.clear();
-                return Ok(f);
-            }
-            if self.cmd_tmo.is_expired() {
-                self.cmd_tmo.clear();
-                return Err(StErr::ErrTimeout);
-            }
+    tx_frame_queue: globals::FrameProducer<2>,
+    cnf_frame_queue: globals::FrameConsumer<2>,
+
+    ack_tmo: Timeout,
+    cmd_tmo: Timeout,
+    status_msg_tmo: Timeout,
+}
+
+impl DSender {
+    pub(super) fn new() -> Self {
+        DSender {
+            sf_state: TxStatus::TxreqLow,
+            tag: SenderTag::Inactive,
+            tx_frame_queue: unsafe { globals::TX_FRAME.split() }.0,
+            cnf_frame_queue: unsafe { globals::CONFIRM_FRAME.split() }.1,
+            ack_tmo: Default::default(),
+            cmd_tmo: Default::default(),
+            status_msg_tmo: Default::default(),
         }
     }
 
-    fn send_frame(&mut self) -> NbStResult<()> {
+    pub fn is_active(&self) -> bool {
+        !matches!(self.tag, SenderTag::Inactive)
+    }
+
+    pub fn enqueue(&mut self, tag: DSTag) -> StResult<&mut Self> {
+        assert!(
+            !self.is_active() && matches!(self.sf_state, TxStatus::TxreqLow)
+        );
+        let DSTag(frame, tag) = tag;
+        self.tx_frame_queue.enqueue(frame).unwrap();
+        self.tag = tag;
+        Ok(self)
+    }
+
+    fn send_frame(&mut self) -> NbStResult<Frame> {
         use nb::Error::WouldBlock;
+
         match self.sf_state {
             TxStatus::TxreqLow => {
                 globals::LOCAL_FRAME_TX.clear();
@@ -348,12 +332,69 @@ impl Driver {
                 let ack = globals::ACK_RX_VALUE.dequeue();
                 let Some(ack) = ack else { return Err(WouldBlock) };
 
-                self.sf_state = TxStatus::TxreqLow;
                 globals::WAIT_ACK.clear();
                 if ack == ACK {
-                    Ok(())
+                    self.cmd_tmo.set(CMD_TMO);
+                    self.sf_state = TxStatus::WaitCnf;
+                    Err(WouldBlock)
                 } else {
+                    self.sf_state = TxStatus::TxreqLow;
                     Err(StErr::TxErrNak.into())
+                }
+            }
+            TxStatus::WaitCnf if self.cmd_tmo.is_expired() => {
+                self.cmd_tmo.clear();
+                Err(StErr::ErrTimeout.into())
+            }
+            TxStatus::WaitCnf => {
+                self.cnf_frame_queue.dequeue().ok_or(WouldBlock).map(|f| {
+                    self.cmd_tmo.clear();
+                    f
+                })
+            }
+        }
+    }
+
+    pub fn process(&mut self) -> NbStResult<()> {
+        use nb::Error::Other;
+
+        let cnf_frame = self.send_frame()?;
+        let tag = self.tag;
+        self.tag = SenderTag::Inactive;
+        macro_rules! def_case {
+            ($err:ident, $cnf:ident) => {
+                match cnf_frame.command {
+                    $err => Err(Other(cnf_frame.data[0].try_into().unwrap())),
+                    $cnf => Ok(()),
+                    _ => Err(Other(StErr::ErrConfirm.into())),
+                }
+            };
+        }
+
+        match tag {
+            SenderTag::Inactive => unreachable!(),
+            SenderTag::Reset => {
+                def_case!(CMD_RESET_ERR, CMD_RESET_CNF)
+            }
+            SenderTag::MibWrite => {
+                def_case!(CMD_MIB_WRITE_ERR, CMD_MIB_WRITE_CNF)
+            }
+            SenderTag::MibErase => {
+                def_case!(CMD_MIB_ERASE_ERR, CMD_MIB_ERASE_CNF)
+            }
+            SenderTag::DlData => {
+                def_case!(CMD_DL_DATA_ERR, CMD_DL_DATA_CNF)
+            }
+            SenderTag::PhyData => {
+                def_case!(CMD_PHY_DATA_ERR, CMD_PHY_DATA_CNF)
+            }
+            SenderTag::Ping(len, buf) => {
+                if cnf_frame.command != CMD_PING_CNF {
+                    Err(Other(cnf_frame.data[0].try_into().unwrap()))
+                } else if &cnf_frame.data[..len] != &buf[..len] {
+                    Err(StErr::ErrPing.into())
+                } else {
+                    Ok(())
                 }
             }
         }

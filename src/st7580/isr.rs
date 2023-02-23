@@ -69,7 +69,6 @@ impl InterruptHandler {
                     globals::WAIT_STATUS.clear();
                 }
                 STX_02 | STX_03 => {
-                    self.rx_frame.clear();
                     self.rx_frame.stx = c;
                     self.ic_timeout.set(IC_TMO);
                     self.rx_state = RxIrqStatus::Length;

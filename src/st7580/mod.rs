@@ -41,7 +41,10 @@ pub struct Builder {
 }
 
 impl Builder {
-    pub fn split(self, clocks: &rcc::Clocks) -> (Driver, InterruptHandler) {
+    pub fn split(
+        self,
+        clocks: &rcc::Clocks,
+    ) -> (Driver, DSender, InterruptHandler) {
         let Self {
             t_req,
             resetn,
@@ -84,7 +87,8 @@ impl Builder {
         let isr = InterruptHandler::new();
 
         let driver = Driver::new(resetn, tx_on, rx_on, tim3, clocks);
+        let dsender = DSender::new();
 
-        (driver, isr)
+        (driver, dsender, isr)
     }
 }

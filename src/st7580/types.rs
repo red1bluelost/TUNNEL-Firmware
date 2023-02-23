@@ -51,13 +51,13 @@ pub(super) enum TxStatus {
     WaitCnf,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug)]
 pub(super) enum SenderTag {
     Inactive,
     Reset,
     MibWrite,
     MibErase,
-    Ping(usize, [u8; 255]),
+    Ping(super::mem::BufBox),
     DlData,
     PhyData,
 }

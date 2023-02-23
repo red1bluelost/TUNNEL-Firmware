@@ -13,6 +13,7 @@ mod app {
         prelude::*,
         timer,
     };
+    use heapless::pool::singleton::Pool;
     use stm32f4xx_hal as hal;
     use tunnel_firmware::dbg;
     use tunnel_firmware::st7580;
@@ -39,8 +40,6 @@ mod app {
         dbg::init!();
         dbg::println!("init");
 
-        static mut EP_MEMORY: [u32; 1024] = [0; 1024];
-
         let dp = ctx.device;
 
         let rcc = dp.RCC.constrain();
@@ -65,6 +64,9 @@ mod app {
             }
             .split(&clocks);
 
+        static mut STBUF: [u8; 1 << 10] = [0; 1 << 10];
+        st7580::POOL::grow(unsafe { &mut STBUF });
+
         let usb = USB {
             usb_global: dp.OTG_FS_GLOBAL,
             usb_device: dp.OTG_FS_DEVICE,
@@ -77,6 +79,7 @@ mod app {
         static mut USB_BUS: Option<
             usb_device::bus::UsbBusAllocator<UsbBusType>,
         > = None;
+        static mut EP_MEMORY: [u32; 1024] = [0; 1024];
         unsafe { USB_BUS.replace(UsbBus::new(usb, &mut EP_MEMORY)) };
         let usb_bus = unsafe { USB_BUS.as_ref() }.unwrap();
         let usb_comm = SerialPort::new(usb_bus);
@@ -160,7 +163,10 @@ mod app {
             *should_init = false;
         }
 
-        let buf = "hello st7580".as_bytes();
+        let buf = st7580::alloc_init(
+            st7580::VecBuf::from_slice("hello st7580".as_bytes()).unwrap(),
+        )
+        .unwrap();
         driver
             .ping(buf)
             .and_then(|tag| dsender.enqueue(tag))

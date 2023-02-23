@@ -1,4 +1,4 @@
-use super::{constants::*, frame::*, globals, types::*};
+use super::{constants::*, frame::*, globals, mem, types::*};
 use hal::{
     gpio::{Input, Output, Pull, PushPull, Speed, PA8, PC0, PC1},
     pac, rcc, serial,
@@ -57,7 +57,7 @@ impl Driver {
 
     pub fn reset(&mut self) -> StResult<DSTag> {
         let tx_frame = Frame::new(STX_02, 0, CMD_RESET_REQ, [0; 255]);
-    
+
         Ok(DSTag(tx_frame, SenderTag::Reset))
     }
 
@@ -110,19 +110,19 @@ impl Driver {
     ///
     /// * `buf` - buffer containing ping test data to be sent. If ping is
     ///   success ST7580 PLC Modem will reply with the same data.
-    pub fn ping(&mut self, buf: &[u8]) -> StResult<DSTag> {
+    pub fn ping(&mut self, buf: mem::BufBox) -> StResult<DSTag> {
         assert!(buf.len() < 255);
         let mut data = [0; 255];
-        data[..buf.len()].clone_from_slice(buf);
+        data[..buf.len()].clone_from_slice(&buf);
         let tx_frame = Frame::new(STX_02, buf.len() as u8, CMD_PING_REQ, data);
 
-        Ok(DSTag(tx_frame, SenderTag::Ping(buf.len(), data)))
+        Ok(DSTag(tx_frame, SenderTag::Ping(buf)))
     }
 
     pub fn phy_data(
         &mut self,
         plm_opts: u8,
-        send_buf: &[u8],
+        send_buf: mem::BufBox,
     ) -> StResult<DSTag> {
         self.impl_phy_dl_data::<PHY_DATALEN_MAX, CMD_PHY_DATA_REQ>(
             plm_opts,
@@ -134,7 +134,7 @@ impl Driver {
     pub fn dl_data(
         &mut self,
         plm_opts: u8,
-        send_buf: &[u8],
+        send_buf: mem::BufBox,
     ) -> StResult<DSTag> {
         self.impl_phy_dl_data::<DL_DATALEN_MAX, CMD_DL_DATA_REQ>(
             plm_opts,
@@ -147,7 +147,7 @@ impl Driver {
     fn impl_phy_dl_data<const LEN_MAX: usize, const REQ: u8>(
         &mut self,
         plm_opts: u8,
-        send_buf: &[u8],
+        send_buf: mem::BufBox,
         tag: SenderTag,
     ) -> StResult<DSTag> {
         if send_buf.len() > LEN_MAX {
@@ -170,7 +170,7 @@ impl Driver {
             offset += 1;
         }
 
-        data[offset..send_buf.len() + offset].clone_from_slice(send_buf);
+        data[offset..send_buf.len() + offset].clone_from_slice(&send_buf);
 
         let tx_frame = Frame::new(STX_02, send_buf.len() as u8 + 1, REQ, data);
 
@@ -359,8 +359,9 @@ impl DSender {
         use nb::Error::Other;
 
         let cnf_frame = self.send_frame()?;
-        let tag = self.tag;
-        self.tag = SenderTag::Inactive;
+        let mut tag = SenderTag::Inactive;
+        core::mem::swap(&mut self.tag, &mut tag);
+
         macro_rules! def_case {
             ($err:ident, $cnf:ident) => {
                 match cnf_frame.command {
@@ -370,7 +371,6 @@ impl DSender {
                 }
             };
         }
-
         match tag {
             SenderTag::Inactive => unreachable!(),
             SenderTag::Reset => {
@@ -388,10 +388,10 @@ impl DSender {
             SenderTag::PhyData => {
                 def_case!(CMD_PHY_DATA_ERR, CMD_PHY_DATA_CNF)
             }
-            SenderTag::Ping(len, buf) => {
+            SenderTag::Ping(buf) => {
                 if cnf_frame.command != CMD_PING_CNF {
                     Err(Other(cnf_frame.data[0].try_into().unwrap()))
-                } else if &cnf_frame.data[..len] != &buf[..len] {
+                } else if &cnf_frame.data[..buf.len()] != &buf[..buf.len()] {
                     Err(StErr::ErrPing.into())
                 } else {
                     Ok(())

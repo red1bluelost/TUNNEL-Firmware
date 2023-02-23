@@ -213,8 +213,12 @@ mod app {
         // Send back ACK Msg to Master Board
         *trs_buffer.last_mut().unwrap() = rcv_last;
         loop {
+            let buf = st7580::alloc_init(
+                st7580::VecBuf::from_slice(trs_buffer).unwrap(),
+            )
+            .unwrap();
             if driver
-                .dl_data(DATA_OPT, trs_buffer)
+                .dl_data(DATA_OPT, buf)
                 .and_then(|tag| dsender.enqueue(tag))
                 .and_then(|d| nb::block!(d.process()))
                 .is_ok()

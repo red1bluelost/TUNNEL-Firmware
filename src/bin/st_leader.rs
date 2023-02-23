@@ -192,8 +192,11 @@ mod app {
             .unwrap();
 
         // Send Trigger Msg send, Check TRIGGER Msg send result
+        let buf =
+            st7580::alloc_init(st7580::VecBuf::from_slice(trs_buffer).unwrap())
+                .unwrap();
         if let Err(ret) = driver
-            .dl_data(DATA_OPT, trs_buffer)
+            .dl_data(DATA_OPT, buf)
             .and_then(|tag| dsender.enqueue(tag))
             .and_then(|d| nb::block!(d.process()))
         {

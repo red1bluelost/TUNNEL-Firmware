@@ -1,4 +1,4 @@
-#[macro_export]
+#[macro_export(crate)]
 macro_rules! init {
     () => {
         #[cfg(feature = "RTT")]
@@ -6,7 +6,7 @@ macro_rules! init {
     };
 }
 
-#[macro_export]
+#[macro_export(crate)]
 macro_rules! println {
     ($($arg:tt)*) => {
         #[cfg(feature = "RTT")]
@@ -17,12 +17,4 @@ macro_rules! println {
     };
 }
 
-#[macro_export]
-macro_rules! exit {
-    () => {
-        #[cfg(feature = "QEMU")]
-        cortex_m_semihosting::debug::exit(debug::EXIT_SUCCESS);
-    };
-}
-
-pub use {exit, init, println};
+pub use {init, println};

@@ -8,12 +8,34 @@
 			"args": [
 				"build",
 				"--features",
-				"RTT,CUSTOM_MIB_FREQUENCY,GAIN_SELECTOR"
+				"QEMU"
 			],
 			"problemMatcher": [
 				"$rustc"
 			],
 			"group": "build"
+		},
+		{
+			"label": "Flash board",
+			"type": "shell",
+			"command": "openocd",
+			"args": [
+				"-f",
+				"openocd.cfg",
+				"-c",
+				"\"program target/thumbv7em-none-eabihf/debug/tunnel_firmware verify reset exit\""
+			],
+			"problemMatcher": {
+				"pattern": {
+					"regexp": "^(Info |Warn |Error):(.*)$",
+					"severity": 1,
+					"message": 2
+				},
+			},
+			"group": "build",
+			"dependsOn": [
+				"Cargo build"
+			]
 		}
 	]
 }

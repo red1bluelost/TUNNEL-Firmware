@@ -11,7 +11,8 @@
             "configFiles": [
                 "openocd.cfg"
             ],
-            "runToMain": true
+            "runToMain": true,
+            "preLaunchTask": "Flash board"
         }
     ]
 }

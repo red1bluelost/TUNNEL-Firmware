@@ -203,7 +203,7 @@ mod app {
         // Send back ACK Msg to Master Board
         *trs_buffer.last_mut().unwrap() = rcv_last;
         loop {
-            if driver.dl_data(DATA_OPT, trs_buffer, None).is_ok() {
+            if driver.dl_data(DATA_OPT, trs_buffer).is_ok() {
                 break;
             }
         }

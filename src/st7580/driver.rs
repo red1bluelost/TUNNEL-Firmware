@@ -156,32 +156,22 @@ impl Driver {
         Ok(())
     }
 
-    pub fn phy_data(
-        &mut self,
-        plm_opts: u8,
-        send_buf: &[u8],
-        conf_buf: Option<&mut [u8]>,
-    ) -> StResult<()> {
+    pub fn phy_data(&mut self, plm_opts: u8, send_buf: &[u8]) -> StResult<()> {
         self.impl_phy_dl_data::<
             PHY_DATALEN_MAX,
             CMD_PHY_DATA_REQ,
             CMD_PHY_DATA_CNF,
             CMD_PHY_DATA_ERR
-        >(plm_opts, send_buf, conf_buf)
+        >(plm_opts, send_buf)
     }
 
-    pub fn dl_data(
-        &mut self,
-        plm_opts: u8,
-        send_buf: &[u8],
-        conf_buf: Option<&mut [u8]>,
-    ) -> StResult<()> {
+    pub fn dl_data(&mut self, plm_opts: u8, send_buf: &[u8]) -> StResult<()> {
         self.impl_phy_dl_data::<
             DL_DATALEN_MAX,
             CMD_DL_DATA_REQ,
             CMD_DL_DATA_CNF,
             CMD_DL_DATA_ERR
-        >(plm_opts, send_buf, conf_buf)
+        >(plm_opts, send_buf)
     }
 
     fn impl_phy_dl_data<
@@ -193,7 +183,6 @@ impl Driver {
         &mut self,
         plm_opts: u8,
         send_buf: &[u8],
-        conf_buf: Option<&mut [u8]>,
     ) -> StResult<()> {
         if send_buf.len() > LEN_MAX {
             return Err(StErr::ErrArgs);
@@ -227,12 +216,6 @@ impl Driver {
         if confirm_frame.command != CNF {
             return Err(StErr::ErrConfirm);
         }
-        let Some(conf_buf) = conf_buf else { return Ok(()) };
-        let len = PHY_DL_SS_RET_LEN;
-        if conf_buf.len() < len {
-            return Err(StErr::ErrBufLen);
-        }
-        conf_buf[..len].clone_from_slice(&confirm_frame.data[..len]);
         Ok(())
     }
 
@@ -242,7 +225,6 @@ impl Driver {
         send_buf: &[u8],
         clr_len: u8,
         enc_len: u8,
-        ret_buf: Option<&mut [u8]>,
     ) -> StResult<()> {
         let data_len = send_buf.len();
         assert_eq!(data_len, clr_len as usize + enc_len as usize);
@@ -286,12 +268,6 @@ impl Driver {
         if confirm_frame.command != CMD_SS_DATA_CNF {
             return Err(StErr::ErrConfirm);
         }
-        let Some(ret_buf) = ret_buf else { return Ok(()) };
-        let len = PHY_DL_SS_RET_LEN;
-        if ret_buf.len() < len {
-            return Err(StErr::ErrBufLen);
-        }
-        ret_buf[..len].clone_from_slice(&confirm_frame.data[..len]);
         Ok(())
     }
 

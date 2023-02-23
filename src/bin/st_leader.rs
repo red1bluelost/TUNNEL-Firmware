@@ -183,7 +183,7 @@ mod app {
             .unwrap();
 
         // Send Trigger Msg send, Check TRIGGER Msg send result
-        if let Err(ret) = driver.dl_data(DATA_OPT, trs_buffer, None) {
+        if let Err(ret) = driver.dl_data(DATA_OPT, trs_buffer) {
             // Transmission Error
             dbg::println!("Trigger Transmission Err: {:?}", ret);
             plm::spawn().unwrap();

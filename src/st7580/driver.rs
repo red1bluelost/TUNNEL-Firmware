@@ -72,7 +72,7 @@ impl Driver {
 
     /*
     pub fn mib_read(&mut self, idx: u8, buf: &mut [u8]) -> StResult<()> {
-        let mut data = [0; 255];
+        let mut data = util::zeros();
         data[0] = idx;
         let tx_frame = Frame::new(STX_02, 1, CMD_MIB_READ_REQ, data);
 
@@ -188,7 +188,7 @@ impl Driver {
             return Err(StErr::ErrArgs);
         }
 
-        let mut data = [0; 255];
+        let mut data = util::zeros();
         let mut offset = 0;
         data[offset] = plm_opts;
         offset += 1;

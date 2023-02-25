@@ -15,8 +15,8 @@ mod app {
     };
     use heapless::pool::singleton::Pool;
     use stm32f4xx_hal as hal;
-    use tunnel_firmware::{dbg, mem, st7580};
-    use usb_device::prelude::*;
+    use tunnel_firmware::{dbg, mem, st7580, util};
+    use usb_device::{bus::UsbBusAllocator, prelude::*};
     use usbd_serial::SerialPort;
 
     #[shared]
@@ -35,10 +35,22 @@ mod app {
     #[monotonic(binds = TIM2, default = true)]
     type MicrosecMono = timer::MonoTimerUs<pac::TIM2>;
 
-    #[init]
+    #[init(
+        local = [
+            stbuf: [u8; 1 << 12] = util::zeros(),
+            ep_memory: [u32; 1024] = util::zeros(),
+            usb_bus: Option<UsbBusAllocator<UsbBusType>> = None,
+        ]
+    )]
     fn init(ctx: init::Context) -> (Shared, Local, init::Monotonics) {
         dbg::init!();
         dbg::println!("init");
+
+        let init::LocalResources {
+            stbuf,
+            ep_memory,
+            usb_bus,
+        } = ctx.local;
 
         let dp = ctx.device;
 
@@ -50,8 +62,7 @@ mod app {
         let gpioa = dp.GPIOA.split();
         let gpioc = dp.GPIOC.split();
 
-        static mut STBUF: [u8; 1 << 12] = [0; 1 << 12];
-        mem::POOL::grow(unsafe { &mut STBUF });
+        mem::POOL::grow(stbuf);
 
         let (st7580_driver, st7580_dsender, st7580_interrupt_handler) =
             st7580::Builder {
@@ -76,12 +87,8 @@ mod app {
             hclk: clocks.hclk(),
         };
 
-        static mut USB_BUS: Option<
-            usb_device::bus::UsbBusAllocator<UsbBusType>,
-        > = None;
-        static mut EP_MEMORY: [u32; 1024] = [0; 1024];
-        unsafe { USB_BUS.replace(UsbBus::new(usb, &mut EP_MEMORY)) };
-        let usb_bus = unsafe { USB_BUS.as_ref() }.unwrap();
+        usb_bus.replace(UsbBus::new(usb, ep_memory));
+        let usb_bus = usb_bus.as_mut().unwrap();
         let usb_comm = SerialPort::new(usb_bus);
         let usb_dev = UsbDeviceBuilder::new(usb_bus, UsbVidPid(0x0000, 0x6969))
             .manufacturer("TUNNEL Team")

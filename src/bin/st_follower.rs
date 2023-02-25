@@ -8,20 +8,25 @@
 )]
 mod app {
     use hal::{
-        pac,
+        pac::{self, TIM3},
         prelude::*,
-        timer::{self, DelayUs},
+        rcc, timer,
     };
     use heapless::pool::singleton::Pool;
     use stm32f4xx_hal as hal;
-    use tunnel_firmware::{dbg, mem, st7580};
+    use tunnel_firmware::{
+        dbg, mem, st7580,
+        util::{self, Exchange},
+    };
 
     #[shared]
-    struct Shared {}
+    struct Shared {
+        clocks: rcc::Clocks,
+        tim3: Option<TIM3>,
+    }
 
     #[local]
     struct Local {
-        delay: DelayUs<pac::TIM3>,
         st7580_interrupt_handler: st7580::InterruptHandler,
         st7580_driver: st7580::Driver,
         st7580_dsender: st7580::DSender,
@@ -30,10 +35,16 @@ mod app {
     #[monotonic(binds = TIM2, default = true)]
     type MicrosecMono = timer::MonoTimerUs<pac::TIM2>;
 
-    #[init]
+    #[init(
+        local = [
+            stbuf: [u8; 1 << 12] = util::zeros(),
+        ]
+    )]
     fn init(ctx: init::Context) -> (Shared, Local, init::Monotonics) {
         dbg::init!();
         dbg::println!("init");
+
+        let init::LocalResources { stbuf } = ctx.local;
 
         let dp = ctx.device;
 
@@ -45,8 +56,7 @@ mod app {
         let gpioa = dp.GPIOA.split();
         let gpioc = dp.GPIOC.split();
 
-        static mut STBUF: [u8; 1 << 12] = [0; 1 << 12];
-        mem::POOL::grow(unsafe { &mut STBUF });
+        mem::POOL::grow(stbuf);
 
         let (st7580_driver, st7580_dsender, st7580_interrupt_handler) =
             st7580::Builder {
@@ -60,15 +70,16 @@ mod app {
                 tim5: dp.TIM5,
             }
             .split(&clocks);
-        let delay = dp.TIM3.delay(&clocks);
 
         plm::spawn().unwrap();
 
         dbg::println!("init end");
         (
-            Shared {},
+            Shared {
+                clocks,
+                tim3: Some(dp.TIM3),
+            },
             Local {
-                delay,
                 st7580_interrupt_handler,
                 st7580_driver,
                 st7580_dsender,
@@ -83,20 +94,19 @@ mod app {
 
     #[task(
         priority = 1,
+        shared = [ clocks, tim3 ],
         local = [
-            delay,
             st7580_driver,
             st7580_dsender,
             should_init: bool = true,
             trs_buffer: [u8; ACK_BUF_SIZE] = *b"ACK MESSAGE ID: @",
-            rcv_buffer: [u8; TRIG_BUF_SIZE] = [0; TRIG_BUF_SIZE],
+            rcv_buffer: [u8; TRIG_BUF_SIZE] = util::zeros(),
             last_id_rcv: u8 = 0,
             iter_cntr: i32 = 0,
         ]
     )]
     fn plm(ctx: plm::Context) {
         let plm::LocalResources {
-            delay,
             st7580_driver: driver,
             st7580_dsender: dsender,
             should_init,
@@ -105,12 +115,16 @@ mod app {
             last_id_rcv,
             iter_cntr,
         } = ctx.local;
+        let plm::SharedResources { clocks, tim3 } = ctx.shared;
+
+        let mut delay =
+            (clocks, tim3).lock(|c, t| t.exchange(None).unwrap().delay_us(c));
 
         // We must perform the initialization stage here due to the `init`
         // task being interrupt free.
         if *should_init {
             dbg::println!("plm init");
-            driver.init(delay);
+            driver.init(&mut delay);
 
             dbg::println!("plm modem conf");
             driver

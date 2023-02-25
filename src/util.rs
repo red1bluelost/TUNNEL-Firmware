@@ -8,3 +8,30 @@ impl<T> Exchange for T {
         val
     }
 }
+
+pub trait Zero {
+    const ZERO: Self;
+}
+
+macro_rules! zero_impl {
+    ($t:ty) => {
+        impl Zero for $t {
+            const ZERO: $t = 0;
+        }
+    };
+}
+
+zero_impl!(u8);
+zero_impl!(u16);
+zero_impl!(u32);
+zero_impl!(u64);
+zero_impl!(i8);
+zero_impl!(i16);
+zero_impl!(i32);
+zero_impl!(i64);
+zero_impl!(usize);
+zero_impl!(isize);
+
+pub const fn zeros<T: Zero + Copy, const N: usize>() -> [T; N] {
+    [T::ZERO; N]
+}

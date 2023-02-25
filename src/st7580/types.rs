@@ -57,7 +57,7 @@ pub(super) enum SenderTag {
     Reset,
     MibWrite,
     MibErase,
-    Ping(super::mem::BufBox),
+    Ping(crate::mem::BufBox),
     DlData,
     PhyData,
 }

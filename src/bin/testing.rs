@@ -15,8 +15,7 @@ mod app {
     };
     use heapless::pool::singleton::Pool;
     use stm32f4xx_hal as hal;
-    use tunnel_firmware::dbg;
-    use tunnel_firmware::st7580;
+    use tunnel_firmware::{dbg, mem, st7580};
     use usb_device::prelude::*;
     use usbd_serial::SerialPort;
 
@@ -52,7 +51,7 @@ mod app {
         let gpioc = dp.GPIOC.split();
 
         static mut STBUF: [u8; 1 << 12] = [0; 1 << 12];
-        st7580::POOL::grow(unsafe { &mut STBUF });
+        mem::POOL::grow(unsafe { &mut STBUF });
 
         let (st7580_driver, st7580_dsender, st7580_interrupt_handler) =
             st7580::Builder {
@@ -171,7 +170,7 @@ mod app {
             *should_init = false;
         }
 
-        let buf = st7580::alloc_from_slice("hello st7580".as_bytes()).unwrap();
+        let buf = mem::alloc_from_slice("hello st7580".as_bytes()).unwrap();
         driver
             .ping(buf)
             .and_then(|tag| dsender.enqueue(tag))

@@ -5,7 +5,6 @@ pub mod driver;
 pub mod frame;
 mod globals;
 pub mod isr;
-pub mod mem;
 mod signal;
 mod types;
 
@@ -28,7 +27,6 @@ pub use constants::*;
 pub use driver::*;
 pub use frame::*;
 pub use isr::*;
-pub use mem::*;
 
 pub struct Builder {
     pub t_req: PA5<Output<PushPull>>,

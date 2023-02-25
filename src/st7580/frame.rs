@@ -1,4 +1,4 @@
-use super::mem::{self, BufBox, VecBuf};
+use crate::mem::{self, BufBox, VecBuf};
 
 #[derive(Debug)]
 pub struct Frame {

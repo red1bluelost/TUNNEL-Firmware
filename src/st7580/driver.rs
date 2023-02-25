@@ -1,4 +1,5 @@
-use super::{constants::*, frame::*, globals, mem, types::*};
+use super::{constants::*, frame::*, globals, types::*};
+use crate::mem;
 use hal::{
     gpio::{Input, Output, Pull, PushPull, Speed, PA8, PC0, PC1},
     serial,

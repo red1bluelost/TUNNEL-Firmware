@@ -14,8 +14,7 @@ mod app {
     };
     use heapless::pool::singleton::Pool;
     use stm32f4xx_hal as hal;
-    use tunnel_firmware::dbg;
-    use tunnel_firmware::st7580;
+    use tunnel_firmware::{dbg, mem, st7580};
 
     #[shared]
     struct Shared {}
@@ -47,7 +46,7 @@ mod app {
         let gpioc = dp.GPIOC.split();
 
         static mut STBUF: [u8; 1 << 12] = [0; 1 << 12];
-        st7580::POOL::grow(unsafe { &mut STBUF });
+        mem::POOL::grow(unsafe { &mut STBUF });
 
         let (st7580_driver, st7580_dsender, st7580_interrupt_handler) =
             st7580::Builder {
@@ -166,7 +165,7 @@ mod app {
         // Send back ACK Msg to Master Board
         *trs_buffer.last_mut().unwrap() = rcv_last;
         loop {
-            let buf = st7580::alloc_from_slice(trs_buffer).unwrap();
+            let buf = mem::alloc_from_slice(trs_buffer).unwrap();
             if driver
                 .dl_data(DATA_OPT, buf)
                 .and_then(|tag| dsender.enqueue(tag))

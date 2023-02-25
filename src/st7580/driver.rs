@@ -353,10 +353,10 @@ impl DSender {
 
     pub fn process(&mut self) -> NbStResult<()> {
         use nb::Error::Other;
+        use crate::util::Exchange;
 
         let cnf_frame = self.send_frame()?;
-        let mut tag = SenderTag::Inactive;
-        core::mem::swap(&mut self.tag, &mut tag);
+        let tag = self.tag.exchange(SenderTag::Inactive);
 
         macro_rules! def_case {
             ($err:ident, $cnf:ident) => {

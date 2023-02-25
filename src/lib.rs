@@ -3,6 +3,7 @@
 pub mod dbg;
 pub mod mem;
 pub mod st7580;
+pub mod util;
 
 #[cfg(feature = "RTT")]
 pub use panic_probe as _;

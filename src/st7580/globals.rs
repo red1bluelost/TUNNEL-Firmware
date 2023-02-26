@@ -1,14 +1,13 @@
 use super::{signal::Signal, *};
+use fugit::Instant;
 use hal::{
     gpio::{Alternate, PA10, PA9},
     serial::Serial1,
-    timer::MonoTimerUs,
 };
 use heapless::{
     mpmc::Q2,
     spsc::{Consumer, Producer, Queue},
 };
-use rtic::Monotonic;
 use stm32f4xx_hal as hal;
 
 pub(super) const QUEUE_SIZE: usize = 8;
@@ -24,14 +23,13 @@ type SerialPlm = Option<Serial1<(PA9<Alternate<7>>, PA10<Alternate<7>>), u8>>;
 pub(super) static mut SERIAL_PLM: SerialPlm = None;
 pub(super) static mut T_REQ_PIN: Option<PA5<Output<PushPull>>> = None;
 
-static mut COUNTER: Option<MonoTimerUs<pac::TIM5>> = None;
-
-pub(super) fn set_counter(counter: MonoTimerUs<pac::TIM5>) {
-    assert!(unsafe { COUNTER.is_none() });
-    unsafe { COUNTER = Some(counter) };
+static mut NOW: Option<fn() -> Instant<u32, 1, 1000000>> = None;
+pub(super) fn set_now_fn(now: fn() -> Instant<u32, 1, 1000000>) {
+    assert!(unsafe { NOW.is_none() });
+    unsafe { NOW.replace(now) };
 }
 pub(super) fn now() -> u32 {
-    unsafe { COUNTER.as_mut() }.unwrap().now().ticks() / 1000
+    unsafe { NOW.as_mut() }.unwrap()().ticks() / 1000
 }
 
 pub(super) static STATUS_VALUE: Q2<u8> = Q2::new();

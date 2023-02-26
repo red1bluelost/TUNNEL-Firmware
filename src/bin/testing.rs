@@ -73,7 +73,7 @@ mod app {
                 usart: dp.USART1,
                 usart_tx: gpioa.pa9.into_alternate(),
                 usart_rx: gpioa.pa10.into_alternate(),
-                tim5: dp.TIM5,
+                now: monotonics::now,
             }
             .split(&clocks);
         let delay = dp.TIM3.delay(&clocks);

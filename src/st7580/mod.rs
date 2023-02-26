@@ -8,15 +8,14 @@ pub mod isr;
 mod signal;
 mod types;
 
+use fugit::Instant;
 /// Code use from the HAL
 use hal::{
     gpio::{
         Alternate, Input, Output, Pull, PushPull, Speed, PA10, PA5, PA8, PA9,
         PC0, PC1,
     },
-    pac,
-    prelude::*,
-    rcc,
+    pac, rcc,
     serial::{config, Serial},
     time,
 };
@@ -36,7 +35,7 @@ pub struct Builder {
     pub usart: pac::USART1,
     pub usart_tx: PA9<Alternate<7>>,
     pub usart_rx: PA10<Alternate<7>>,
-    pub tim5: pac::TIM5,
+    pub now: fn() -> Instant<u32, 1, 1000000>,
 }
 
 impl Builder {
@@ -52,7 +51,7 @@ impl Builder {
             usart,
             usart_tx,
             usart_rx,
-            tim5,
+            now,
         } = self;
 
         let mut t_req = t_req.internal_resistor(Pull::None).speed(Speed::High);
@@ -79,8 +78,7 @@ impl Builder {
         .unwrap();
         unsafe { globals::SERIAL_PLM.replace(serial_plm) };
 
-        let counter = tim5.monotonic(clocks);
-        globals::set_counter(counter);
+        globals::set_now_fn(now);
 
         let isr = InterruptHandler::new();
 

@@ -1,6 +1,7 @@
 {
     "rust-analyzer.checkOnSave": false,
     "rust-analyzer.cargo.features": [
-        "QEMU"
+        "QEMU",
+        "F446"
     ]
 }

@@ -1,6 +1,6 @@
 [target.thumbv7em-none-eabihf]
-runner = 'probe-run --chip STM32F411CEUx'
-# runner = 'qemu-system-arm -cpu cortex-m4 -machine netduinoplus2 -nographic -semihosting-config enable=on,target=native -kernel'
+# runner = 'probe-run --chip STM32F411CEUx'
+runner = 'probe-run --chip STM32F446RETx'# runner = 'qemu-system-arm -cpu cortex-m4 -machine netduinoplus2 -nographic -semihosting-config enable=on,target=native -kernel'
 # runner = "arm-none-eabi-gdb -x openocd.gdb"
 rustflags = [
     "-C", "link-arg=-Tlink.x", "-g",

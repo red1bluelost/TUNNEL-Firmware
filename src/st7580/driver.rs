@@ -352,8 +352,8 @@ impl DSender {
     }
 
     pub fn process(&mut self) -> NbStResult<()> {
-        use nb::Error::Other;
         use crate::util::Exchange;
+        use nb::Error::Other;
 
         let cnf_frame = self.send_frame()?;
         let tag = self.tag.exchange(SenderTag::Inactive);

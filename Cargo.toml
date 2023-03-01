@@ -9,6 +9,8 @@ HALT = ["dep:panic-halt"]
 QEMU = ["dep:cortex-m-semihosting", "dep:panic-semihosting"]
 CUSTOM_MIB_FREQUENCY = []
 GAIN_SELECTOR = []
+F411 = ["stm32f4xx-hal/stm32f411", "stm32f4xx-hal/usb_fs", "stm32f4xx-hal/otg-fs"]
+F446 = ["stm32f4xx-hal/stm32f446", "stm32f4xx-hal/usb_hs", "stm32f4xx-hal/otg-hs"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -37,4 +39,4 @@ optional = true
 
 [dependencies.stm32f4xx-hal]
 version = "0.14.0"
-features = ["stm32f411", "usb_fs", "otg-fs", "rt", "rtic", "rtic-monotonic"]
+features = ["rt", "rtic", "rtic-monotonic"]

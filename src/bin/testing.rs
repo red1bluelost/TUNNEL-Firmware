@@ -7,8 +7,11 @@
     dispatchers = [SPI1, SPI2, SPI3]
 )]
 mod app {
+    #[cfg(feature = "F411")]
+    use hal::otg_fs::{UsbBus, UsbBusType, USB};
+    #[cfg(feature = "F446")]
+    use hal::otg_hs::{UsbBus, UsbBusType, USB};
     use hal::{
-        otg_fs::{UsbBus, UsbBusType, USB},
         pac,
         prelude::*,
         timer::{self, DelayUs},
@@ -78,6 +81,7 @@ mod app {
             .split(&clocks);
         let delay = dp.TIM3.delay(&clocks);
 
+        #[cfg(feature = "F411")]
         let usb = USB {
             usb_global: dp.OTG_FS_GLOBAL,
             usb_device: dp.OTG_FS_DEVICE,
@@ -85,6 +89,19 @@ mod app {
             pin_dm: gpioa.pa11.into_alternate(),
             pin_dp: gpioa.pa12.into_alternate(),
             hclk: clocks.hclk(),
+        };
+
+        #[cfg(feature = "F446")]
+        let usb = {
+            let gpiob = dp.GPIOB.split();
+            USB {
+                usb_global: dp.OTG_HS_GLOBAL,
+                usb_device: dp.OTG_HS_DEVICE,
+                usb_pwrclk: dp.OTG_HS_PWRCLK,
+                pin_dm: gpiob.pb14.into_alternate(),
+                pin_dp: gpiob.pb15.into_alternate(),
+                hclk: clocks.hclk(),
+            }
         };
 
         usb_bus.replace(UsbBus::new(usb, ep_memory));

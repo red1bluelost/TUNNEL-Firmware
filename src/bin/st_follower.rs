@@ -58,7 +58,6 @@ mod app {
 
         mem::POOL::grow(stbuf);
 
-
         let (st7580_driver, st7580_dsender, st7580_interrupt_handler) =
             st7580::Builder {
                 t_req: gpioa.pa5.into_push_pull_output(),

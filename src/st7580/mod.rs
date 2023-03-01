@@ -1,15 +1,6 @@
 //! Code relating to the ST7580 chip
 
-pub mod constants;
-pub mod driver;
-pub mod frame;
-mod globals;
-pub mod isr;
-mod signal;
-mod types;
-
 use fugit::Instant;
-/// Code use from the HAL
 use hal::{
     gpio::{
         Alternate, Input, Output, Pull, PushPull, Speed, PA10, PA5, PA8, PA9,
@@ -26,6 +17,14 @@ pub use constants::*;
 pub use driver::*;
 pub use frame::*;
 pub use isr::*;
+
+pub mod constants;
+pub mod driver;
+pub mod frame;
+mod globals;
+pub mod isr;
+mod signal;
+mod types;
 
 pub struct Builder {
     pub t_req: PA5<Output<PushPull>>,

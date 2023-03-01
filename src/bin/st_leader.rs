@@ -14,6 +14,7 @@ mod app {
     };
     use heapless::pool::singleton::Pool;
     use stm32f4xx_hal as hal;
+
     use tunnel_firmware::{
         dbg, mem, st7580,
         util::{self, Exchange},

@@ -1,4 +1,3 @@
-use super::{signal::Signal, *};
 use fugit::Instant;
 use hal::{
     gpio::{Alternate, PA10, PA9},
@@ -9,6 +8,8 @@ use heapless::{
     spsc::{Consumer, Producer, Queue},
 };
 use stm32f4xx_hal as hal;
+
+use super::{signal::Signal, *};
 
 pub(super) const QUEUE_SIZE: usize = 8;
 pub(super) static mut FRAME_QUEUE: Queue<Frame, QUEUE_SIZE> = Queue::new();

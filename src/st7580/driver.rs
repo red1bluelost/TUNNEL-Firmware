@@ -1,11 +1,13 @@
-use super::{constants::*, frame::*, globals, types::*};
-use crate::mem;
 use hal::{
     gpio::{Input, Output, Pull, PushPull, Speed, PA8, PC0, PC1},
     serial,
     timer::{self, DelayUs, ExtU32},
 };
 use stm32f4xx_hal as hal;
+
+use crate::mem;
+
+use super::{constants::*, frame::*, globals, types::*};
 
 pub struct Driver {
     resetn: PA8<Output<PushPull>>,

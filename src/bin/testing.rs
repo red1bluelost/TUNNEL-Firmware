@@ -18,9 +18,13 @@ mod app {
     };
     use heapless::pool::singleton::Pool;
     use stm32f4xx_hal as hal;
-    use tunnel_firmware::{dbg, mem, st7580, util};
     use usb_device::{bus::UsbBusAllocator, prelude::*};
     use usbd_serial::SerialPort;
+
+    use tunnel_firmware::{dbg, mem, st7580, util};
+
+    const USB_BUF_SIZE: usize = 512;
+    type UsbBuf = [u8; USB_BUF_SIZE];
 
     #[shared]
     struct Shared {}
@@ -28,7 +32,7 @@ mod app {
     #[local]
     struct Local {
         usb_dev: UsbDevice<'static, UsbBusType>,
-        usb_comm: SerialPort<'static, UsbBusType>,
+        usb_comm: SerialPort<'static, UsbBusType, UsbBuf, UsbBuf>,
         delay: DelayUs<pac::TIM3>,
         st7580_interrupt_handler: st7580::InterruptHandler,
         st7580_driver: st7580::Driver,
@@ -106,7 +110,8 @@ mod app {
 
         usb_bus.replace(UsbBus::new(usb, ep_memory));
         let usb_bus = usb_bus.as_mut().unwrap();
-        let usb_comm = SerialPort::new(usb_bus);
+        let usb_comm =
+            SerialPort::new_with_store(usb_bus, util::zeros(), util::zeros());
         let usb_dev = UsbDeviceBuilder::new(usb_bus, UsbVidPid(0x0000, 0x6969))
             .manufacturer("TUNNEL Team")
             .product("TUNNEL Device")

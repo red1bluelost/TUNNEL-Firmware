@@ -12,6 +12,17 @@
                 "openocd.cfg"
             ],
             "preLaunchTask": "Flash board"
+        },
+        {
+            "name": "Debug usb_reader",
+            "request": "launch",
+            "servertype": "openocd",
+            "type": "cortex-debug",
+            "cwd": "${workspaceRoot}",
+            "executable": "./target/thumbv7em-none-eabihf/debug/usb_reader",
+            "configFiles": [
+                "openocd.cfg"
+            ]
         }
     ]
 }

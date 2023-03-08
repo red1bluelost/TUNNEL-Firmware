@@ -11,3 +11,4 @@ pub mod dbg;
 pub mod mem;
 pub mod st7580;
 pub mod util;
+pub mod usb;

@@ -2,9 +2,9 @@
 #![no_std]
 
 use stm32f4xx_hal::otg_fs::UsbBusType;
-use tunnel_firmware::{dbg, util};
+use tunnel_firmware::dbg;
 use usb_device::{bus::UsbBusAllocator, class_prelude::*};
-use usbd_serial::{CdcAcmClass, Result};
+use usbd_serial::{Result, SerialPort};
 
 #[rtic::app(
     device = hal::pac,
@@ -121,35 +121,37 @@ mod app {
             }
         }
 
-        return;
-        let tmp = "yeet".as_bytes();
-        buffer[..tmp.len()].clone_from_slice(tmp);
-        match usb_comm.write(&buffer[..tmp.len()]) {
-            Ok(count) => {
-                dbg::println!("wrote {} bytes", count);
-                dbg::dump_buffer(&buffer[..count]);
-                dbg::println!("dump over\n");
-            }
-            Err(usbd_serial::UsbError::WouldBlock) => {}
-            Err(err) => {
-                dbg::println!("USB write failed: {:?}", err);
+        #[cfg(any())]
+        {
+            let tmp = "yeet".as_bytes();
+            buffer[..tmp.len()].clone_from_slice(tmp);
+            match usb_comm.write(&buffer[..tmp.len()]) {
+                Ok(count) => {
+                    dbg::println!("wrote {} bytes", count);
+                    dbg::dump_buffer(&buffer[..count]);
+                    dbg::println!("dump over\n");
+                }
+                Err(usbd_serial::UsbError::WouldBlock) => {}
+                Err(err) => {
+                    dbg::println!("USB write failed: {:?}", err);
+                }
             }
         }
     }
 }
-pub struct SerialPortTrace(CdcAcmClass<'static, UsbBusType>);
+pub struct SerialPortTrace(SerialPort<'static, UsbBusType>);
 
 impl SerialPortTrace {
     pub fn new(alloc: &'static UsbBusAllocator<UsbBusType>) -> Self {
-        SerialPortTrace(CdcAcmClass::new(alloc, 64))
+        SerialPortTrace(SerialPort::new(alloc))
     }
 
     pub fn read(&mut self, data: &mut [u8]) -> Result<usize> {
-        self.0.read_packet(data)
+        self.0.read(data)
     }
 
     pub fn write(&mut self, data: &[u8]) -> Result<usize> {
-        self.0.write_packet(data)
+        self.0.write(data)
     }
 }
 

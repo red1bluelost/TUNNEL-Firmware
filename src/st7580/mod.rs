@@ -42,6 +42,8 @@ impl Builder {
         self,
         clocks: &rcc::Clocks,
     ) -> (Driver, DSender, InterruptHandler) {
+        cortex_m::singleton!(:bool = false).expect("May only call split once");
+
         let Self {
             t_req,
             resetn,

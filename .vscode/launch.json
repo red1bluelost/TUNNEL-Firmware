@@ -23,6 +23,17 @@
             "configFiles": [
                 "openocd.cfg"
             ]
+        },
+        {
+            "name": "Debug usb_testing",
+            "request": "launch",
+            "servertype": "openocd",
+            "type": "cortex-debug",
+            "cwd": "${workspaceRoot}",
+            "executable": "./target/thumbv7em-none-eabihf/debug/usb_testing",
+            "configFiles": [
+                "openocd.cfg"
+            ]
         }
     ]
 }

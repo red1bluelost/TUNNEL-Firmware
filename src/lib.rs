@@ -10,4 +10,5 @@ pub use panic_semihosting as _;
 pub mod dbg;
 pub mod mem;
 pub mod st7580;
+pub mod usbd_ether;
 pub mod util;

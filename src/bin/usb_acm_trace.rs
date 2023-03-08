@@ -4,7 +4,7 @@
 use stm32f4xx_hal::otg_fs::UsbBusType;
 use tunnel_firmware::{dbg, util};
 use usb_device::{bus::UsbBusAllocator, class_prelude::*};
-use usbd_serial::{Result, SerialPort};
+use usbd_serial::{CdcAcmClass, Result};
 
 #[rtic::app(
     device = hal::pac,
@@ -48,7 +48,7 @@ mod app {
         let dp = ctx.device;
 
         let rcc = dp.RCC.constrain();
-        let clocks = rcc.cfgr.use_hse(8.MHz()).sysclk(100.MHz()).freeze();
+        let clocks = rcc.cfgr.use_hse(8.MHz()).sysclk(96.MHz()).freeze();
 
         let mono = dp.TIM2.monotonic_us(&clocks);
 
@@ -91,6 +91,7 @@ mod app {
             usb_dev,
             usb_comm,
             buffer: [u8; 1 << 12] = util::zeros(),
+            counter: u64 = 0,
         ]
     )]
     fn usb(ctx: usb::Context) {
@@ -98,10 +99,11 @@ mod app {
             usb_dev,
             usb_comm,
             buffer,
+            counter,
         } = ctx.local;
 
         if !usb_dev.poll(&mut [usb_comm]) {
-            return;
+            // return;
         }
 
         match usb_comm.read(buffer) {
@@ -110,7 +112,10 @@ mod app {
                 dbg::dump_buffer(&buffer[..count]);
                 dbg::println!("dump over\n");
             }
-            Err(usbd_serial::UsbError::WouldBlock) => {}
+            Err(usbd_serial::UsbError::WouldBlock) => {
+                // dbg::println!("attempting read {}", counter);
+                *counter += 1;
+            }
             Err(err) => {
                 dbg::println!("USB read failed: {:?}", err);
             }
@@ -132,26 +137,19 @@ mod app {
         }
     }
 }
-
-const USB_BUF_SIZE: usize = 512;
-type UsbBuf = [u8; USB_BUF_SIZE];
-pub struct SerialPortTrace(SerialPort<'static, UsbBusType, UsbBuf, UsbBuf>);
+pub struct SerialPortTrace(CdcAcmClass<'static, UsbBusType>);
 
 impl SerialPortTrace {
     pub fn new(alloc: &'static UsbBusAllocator<UsbBusType>) -> Self {
-        SerialPortTrace(SerialPort::new_with_store(
-            alloc,
-            util::zeros(),
-            util::zeros(),
-        ))
+        SerialPortTrace(CdcAcmClass::new(alloc, 64))
     }
 
     pub fn read(&mut self, data: &mut [u8]) -> Result<usize> {
-        self.0.read(data)
+        self.0.read_packet(data)
     }
 
     pub fn write(&mut self, data: &[u8]) -> Result<usize> {
-        self.0.write(data)
+        self.0.write_packet(data)
     }
 }
 
@@ -182,32 +180,32 @@ impl UsbClass<UsbBusType> for SerialPortTrace {
     }
 
     fn endpoint_setup(&mut self, addr: EndpointAddress) {
-        dbg::println!("Endpoint setup for {:?}", addr);
+        // dbg::println!("Endpoint setup for {:?}", addr);
         self.0.endpoint_setup(addr)
     }
 
     fn endpoint_out(&mut self, addr: EndpointAddress) {
-        dbg::println!("Endpoint out for {:?}", addr);
+        // dbg::println!("Endpoint out for {:?}", addr);
         self.0.endpoint_out(addr)
     }
 
     fn endpoint_in_complete(&mut self, addr: EndpointAddress) {
-        dbg::println!("Endpoint in complete for {:?}", addr);
+        // dbg::println!("Endpoint in complete for {:?}", addr);
         self.0.endpoint_in_complete(addr)
     }
 
     fn get_string(&self, index: StringIndex, lang_id: u16) -> Option<&str> {
-        dbg::println!("Get String for {:?} {:?}", u8::from(index), lang_id);
+        // dbg::println!("Get String for {:?} {:?}", u8::from(index), lang_id);
         self.0.get_string(index, lang_id)
     }
 
     fn poll(&mut self) {
-        dbg::println!("poll");
+        // dbg::println!("poll");
         self.0.poll()
     }
 
     fn reset(&mut self) {
-        dbg::println!("USB Reset");
+        // dbg::println!("USB Reset");
         self.0.reset()
     }
 }

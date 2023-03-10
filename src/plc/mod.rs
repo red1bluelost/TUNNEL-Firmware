@@ -10,6 +10,9 @@ pub use leader::Leader;
 const PLM_SPACE_USED: usize = 4;
 const HEADER_IDX: usize = PLM_SPACE_USED;
 const DATA_START: usize = HEADER_IDX + 1;
+
+/// TODO: This is a magic number that is a bit more complicated if using
+/// CUSTOM_MIB_FREQUENCY or GAIN_SELECTOR
 const DATA_OPT: u8 = 0x44;
 
 enum Header {

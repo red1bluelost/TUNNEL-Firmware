@@ -17,7 +17,7 @@ pub use constants::*;
 pub use driver::*;
 pub use frame::*;
 pub use isr::*;
-pub use types::{NbStErr, NbStResult, StErr, StResult};
+pub use types::{NbStErr, NbStResult, StErr, StResult, Timeout};
 
 pub mod constants;
 pub mod driver;

@@ -40,16 +40,17 @@ impl Follower {
     pub fn process(&mut self) {
         match self.state {
             State::Wait => {
-                let Some(mut f) = self.driver.receive_frame() else { return };
+                let Some(f) = self.driver.receive_frame() else { return };
+                assert!(matches!(f.command, st7580::STX_03 | st7580::STX_02));
                 let header = f.data[HEADER_IDX].try_into().unwrap();
                 match header {
                     Header::Idle => panic!("Unexpected Idle from leader"),
                     Header::Data => {
                         let len = f.length as usize;
-                        let data_len = len - DATA_START;
-                        f.data.copy_within(DATA_START..len, len - DATA_START);
-                        f.data.truncate(data_len);
-                        self.channels.in_producer.enqueue(f.data).unwrap();
+                        let mut data = f.data;
+                        data.copy_within(DATA_START..len, 0);
+                        data.truncate(len - DATA_START);
+                        self.channels.in_producer.enqueue(data).unwrap();
                     }
                     Header::Ping => {
                         let receive_opt = self.channels.out_consumer.dequeue();

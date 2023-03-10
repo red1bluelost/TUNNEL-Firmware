@@ -89,13 +89,13 @@ pub(super) enum RxIrqStatus {
 }
 
 #[derive(Default, Debug, Clone, Copy)]
-pub(super) struct Timeout {
+pub struct Timeout {
     tmo: u32,
     tmo_start_time: u32,
 }
 
 impl Timeout {
-    pub(super) fn is_expired(&self) -> bool {
+    pub fn is_expired(&self) -> bool {
         let Timeout {
             tmo,
             tmo_start_time,
@@ -114,14 +114,14 @@ impl Timeout {
         elapse >= tmo
     }
 
-    pub(super) fn set(&mut self, tmo: u32) {
+    pub fn set(&mut self, tmo: u32) {
         *self = Timeout {
             tmo,
             tmo_start_time: super::globals::now(),
         };
     }
 
-    pub(super) fn clear(&mut self) {
+    pub fn clear(&mut self) {
         *self = Default::default();
     }
 }

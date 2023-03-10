@@ -11,6 +11,8 @@ CUSTOM_MIB_FREQUENCY = []
 GAIN_SELECTOR = []
 F411 = ["stm32f4xx-hal/stm32f411"]
 F446 = ["stm32f4xx-hal/stm32f446"]
+LEADER = []
+FOLLOWER = []
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

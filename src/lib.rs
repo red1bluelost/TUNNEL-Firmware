@@ -9,6 +9,7 @@ pub use panic_semihosting as _;
 
 pub mod dbg;
 pub mod mem;
+pub mod plc;
 pub mod st7580;
-pub mod util;
 pub mod usb;
+pub mod util;

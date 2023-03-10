@@ -17,7 +17,11 @@ mod app {
     use stm32f4xx_hal as hal;
     use usb_device::{bus::UsbBusAllocator, prelude::*};
 
-    use tunnel_firmware::{dbg, mem, st7580, usb, util};
+    #[cfg(feature = "LEADER")]
+    use plc::Follower as PlcDriver;
+    #[cfg(feature = "FOLLOWER")]
+    use plc::Leader as PlcDriver;
+    use tunnel_firmware::{dbg, mem, plc, st7580, usb, util};
 
     #[shared]
     struct Shared {}
@@ -26,10 +30,9 @@ mod app {
     struct Local {
         usb_device: UsbDevice<'static, UsbBusType>,
         usb_manager: usb::UsbManager,
-        delay: DelayUs<pac::TIM3>,
         st7580_interrupt_handler: st7580::InterruptHandler,
-        st7580_driver: st7580::Driver,
-        st7580_dsender: st7580::DSender,
+        delay: DelayUs<pac::TIM3>,
+        driver: PlcDriver,
     }
 
     #[monotonic(binds = TIM2, default = true)]
@@ -104,6 +107,13 @@ mod app {
                 .self_powered(true)
                 .build();
 
+        let driver = PlcDriver::new(
+            st7580_driver,
+            st7580_dsender,
+            in_producer,
+            out_consumer,
+        );
+
         plm::spawn().unwrap();
 
         dbg::println!("init end");
@@ -112,10 +122,9 @@ mod app {
             Local {
                 usb_device,
                 usb_manager,
-                delay,
                 st7580_interrupt_handler,
-                st7580_driver,
-                st7580_dsender,
+                delay,
+                driver,
             },
             init::Monotonics(mono),
         )
@@ -146,16 +155,14 @@ mod app {
         priority = 1,
         local = [
             delay,
-            st7580_driver,
-            st7580_dsender,
+            driver,
             should_init: bool = true
         ]
     )]
     fn plm(ctx: plm::Context) {
         let plm::LocalResources {
             delay,
-            st7580_driver: driver,
-            st7580_dsender: dsender,
+            driver,
             should_init,
         } = ctx.local;
 
@@ -164,27 +171,12 @@ mod app {
         if *should_init {
             dbg::println!("plm init");
             driver.init(delay);
-
-            dbg::println!("plm modem conf");
-            driver
-                .mib_write(st7580::MIB_MODEM_CONF, &st7580::MODEM_CONFIG)
-                .and_then(|tag| dsender.enqueue(tag))
-                .and_then(|d| nb::block!(d.process()))
-                .unwrap();
-            delay.delay(500.millis());
-
-            dbg::println!("plm phy conf");
-            driver
-                .mib_write(st7580::MIB_PHY_CONF, &st7580::PHY_CONFIG)
-                .and_then(|tag| dsender.enqueue(tag))
-                .and_then(|d| nb::block!(d.process()))
-                .unwrap();
-            delay.delay(500.millis());
-
             *should_init = false;
         }
 
-        plm::spawn_after(5.secs()).unwrap();
+        driver.process();
+
+        plm::spawn().unwrap();
     }
 
     #[task(binds = USART1, priority = 2, local = [st7580_interrupt_handler])]

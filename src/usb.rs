@@ -9,11 +9,11 @@ use usbd_serial::{Result, SerialPort, UsbError};
 
 type UsbBuf = [u8; 512];
 
-const QUEUE_SIZE: usize = 8;
-type Elem = mem::BufBox;
+pub const QUEUE_SIZE: usize = 8;
+pub type Elem = mem::BufBox;
 type UsbQueue = Queue<Elem, QUEUE_SIZE>;
-type UsbProducer = Producer<'static, Elem, QUEUE_SIZE>;
-type UsbConsumer = Consumer<'static, Elem, QUEUE_SIZE>;
+pub type UsbProducer = Producer<'static, Elem, QUEUE_SIZE>;
+pub type UsbConsumer = Consumer<'static, Elem, QUEUE_SIZE>;
 static mut IN_QUEUE: UsbQueue = Queue::new();
 static mut OUT_QUEUE: UsbQueue = Queue::new();
 

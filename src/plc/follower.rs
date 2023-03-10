@@ -1,5 +1,5 @@
-use super::Channels;
-use crate::{st7580, usb};
+use super::{Channels, Header, DATA_OPT, DATA_START, HEADER_IDX};
+use crate::{mem, st7580, usb};
 use stm32f4xx_hal::timer::{self, DelayUs};
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -38,6 +38,46 @@ impl Follower {
     }
 
     pub fn process(&mut self) {
-        todo!()
+        match self.state {
+            State::Wait => {
+                let Some(mut f) = self.driver.receive_frame() else { return };
+                let header = f.data[HEADER_IDX].try_into().unwrap();
+                match header {
+                    Header::Idle => panic!("Unexpected Idle from leader"),
+                    Header::Data => {
+                        let len = f.length as usize;
+                        let data_len = len - DATA_START;
+                        f.data.copy_within(DATA_START..len, len - DATA_START);
+                        f.data.truncate(data_len);
+                        self.channels.in_producer.enqueue(f.data).unwrap();
+                    }
+                    Header::Ping => {
+                        let receive_opt = self.channels.out_consumer.dequeue();
+                        let send_buf = match receive_opt {
+                            Some(mut send_buf) => {
+                                send_buf.push(Header::Data.into()).unwrap();
+                                send_buf.rotate_right(1);
+                                send_buf
+                            }
+                            None => {
+                                mem::alloc_from_slice(&[Header::Idle.into()])
+                                    .unwrap()
+                            }
+                        };
+                        let tag =
+                            self.driver.dl_data(DATA_OPT, send_buf).unwrap();
+                        self.sender.enqueue(tag).unwrap();
+                        self.state = State::Send;
+                    }
+                }
+            }
+            State::Send => match self.sender.process() {
+                Ok(()) => self.state = State::Wait,
+                Err(st7580::NbStErr::WouldBlock) => {}
+                Err(st7580::NbStErr::Other(e)) => {
+                    panic!("Ping processing error: {:?}", e)
+                }
+            },
+        }
     }
 }

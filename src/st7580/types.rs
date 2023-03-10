@@ -41,6 +41,8 @@ pub type StResult<T> = core::result::Result<T, StErr>;
 
 pub type NbStResult<T> = nb::Result<T, StErr>;
 
+pub type NbStErr = nb::Error<StErr>;
+
 /// Frame tx High Level state machine states.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum TxStatus {

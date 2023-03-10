@@ -7,12 +7,15 @@ pub mod leader;
 pub use follower::Follower;
 pub use leader::Leader;
 
+const PLM_SPACE_USED: usize = 4;
+const HEADER_IDX: usize = PLM_SPACE_USED;
+const DATA_START: usize = HEADER_IDX + 1;
+const DATA_OPT: u8 = 0x44;
+
 enum Header {
-    Ack = 0x00,
-    Nack = 0x01,
-    Idle = 0x02,
-    Send = 0x03,
-    Data = 0x04,
+    Idle = 0x00,
+    Data = 0x01,
+    Ping = 0x02,
 }
 
 impl Into<u8> for Header {
@@ -27,11 +30,9 @@ impl TryFrom<u8> for Header {
     fn try_from(v: u8) -> Result<Self, Self::Error> {
         use Header::*;
         match v {
-            0x00 => Ok(Ack),
-            0x01 => Ok(Nack),
-            0x02 => Ok(Idle),
-            0x03 => Ok(Send),
-            0x04 => Ok(Data),
+            0x00 => Ok(Idle),
+            0x01 => Ok(Data),
+            0x02 => Ok(Ping),
             v => Err(v),
         }
     }

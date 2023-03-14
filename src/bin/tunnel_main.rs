@@ -18,9 +18,9 @@ mod app {
     use usb_device::{bus::UsbBusAllocator, prelude::*};
 
     #[cfg(feature = "LEADER")]
-    use plc::Follower as PlcDriver;
-    #[cfg(feature = "FOLLOWER")]
     use plc::Leader as PlcDriver;
+    #[cfg(feature = "FOLLOWER")]
+    use plc::Follower as PlcDriver;
     use tunnel_firmware::{dbg, mem, plc, st7580, usb, util};
 
     #[shared]
@@ -172,6 +172,7 @@ mod app {
             dbg::println!("plm init");
             driver.init(delay);
             *should_init = false;
+            dbg::println!("plm init end");
         }
 
         driver.process();

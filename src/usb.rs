@@ -44,7 +44,9 @@ impl UsbManager {
                 let mut sending =
                     self.current_read.exchange(mem::alloc().unwrap());
                 sending.truncate(len);
-                self.out_producer.enqueue(sending).unwrap();
+                self.out_producer
+                    .enqueue(sending)
+                    .expect("The out going message queue is full");
             }
             // No new data so continue
             Err(UsbError::WouldBlock) => {}

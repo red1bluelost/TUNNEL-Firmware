@@ -54,6 +54,7 @@ impl Leader {
                         send_buf
                     }
                     None => {
+                        self.state = State::SendPing;
                         mem::alloc_from_slice(&[Header::Idle.into()]).unwrap()
                     }
                 };
@@ -62,13 +63,21 @@ impl Leader {
             }
             State::SendPing | State::SendData => match self.sender.process() {
                 Ok(()) if self.state == State::SendPing => {
-                    self.ping_timeout.set(1000);
+                    self.ping_timeout.set(100);
                     self.state = State::WaitPing;
                 }
                 Ok(()) => self.state = State::Dispatch,
                 Err(st7580::NbStErr::WouldBlock) => {}
+                Err(st7580::NbStErr::Other(st7580::StErr::TxErrNoStatus)) => {
+                    crate::dbg::println!("plm did not return status");
+                    self.state = State::Dispatch;
+                }
+                Err(st7580::NbStErr::Other(st7580::StErr::TxErrAckTmo)) => {
+                    crate::dbg::println!("plm ack timed out");
+                    self.state = State::Dispatch;
+                }
                 Err(st7580::NbStErr::Other(e)) => {
-                    panic!("Ping processing error: {:?}", e)
+                    panic!("{:?} processing error: {:?}", self.state, e)
                 }
             },
             State::WaitPing if self.ping_timeout.is_expired() => {

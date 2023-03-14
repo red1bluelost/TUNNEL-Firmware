@@ -265,11 +265,12 @@ impl DSender {
     }
 
     pub fn enqueue(&mut self, tag: DSTag) -> StResult<&mut Self> {
-        assert!(
-            !self.is_active() && matches!(self.sf_state, TxStatus::TxreqLow)
-        );
+        assert!(!self.is_active());
+        assert!(matches!(self.sf_state, TxStatus::TxreqLow));
         let DSTag(frame, tag) = tag;
-        self.tx_frame_queue.enqueue(frame).unwrap();
+        self.tx_frame_queue
+            .enqueue(frame)
+            .map_err(|_| StErr::TxErrBusy)?;
         self.tag = tag;
         Ok(self)
     }
@@ -355,9 +356,14 @@ impl DSender {
 
     pub fn process(&mut self) -> NbStResult<()> {
         use crate::util::Exchange;
-        use nb::Error::Other;
+        use nb::Error::{Other, WouldBlock};
 
-        let cnf_frame = self.send_frame()?;
+        let cnf_frame = self.send_frame().map_err(|e| {
+            if e != WouldBlock {
+                self.tag = SenderTag::Inactive;
+            }
+            e
+        })?;
         let tag = self.tag.exchange(SenderTag::Inactive);
 
         macro_rules! def_case {

@@ -29,17 +29,14 @@ impl InterruptHandler {
         unsafe { globals::SERIAL_PLM.as_mut() }
             .unwrap()
             .listen(Event::Rxne);
-        let ind_frame_queue = unsafe { globals::FRAME_QUEUE.split().0 };
-        let cnf_frame_queue = unsafe { globals::CONFIRM_FRAME.split().0 };
-        let tx_frame_queue = unsafe { globals::TX_FRAME.split().1 };
         Self {
             ic_timeout: Default::default(),
             rx_state: RxIrqStatus::FirstByte,
             rx_cksum: 0,
             rx_frame: Default::default(),
-            ind_frame_queue,
-            cnf_frame_queue,
-            tx_frame_queue,
+            ind_frame_queue: unsafe { globals::FRAME_QUEUE.split() }.0,
+            cnf_frame_queue: unsafe { globals::CONFIRM_FRAME.split() }.0,
+            tx_frame_queue: unsafe { globals::TX_FRAME.split() }.1,
             ack_tx_value: None,
             tx_state: TxIrqStatus::SendStx,
             tx_cur_idx: 0,

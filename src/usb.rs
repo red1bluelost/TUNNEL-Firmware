@@ -60,7 +60,7 @@ impl UsbManager {
         // Write the data to host
         match self.serial.write(&current_write) {
             // Currently relying on everything being sent
-            Ok(len) => assert_eq!(len, current_write.len()),
+            Ok(len) => debug_assert_eq!(len, current_write.len()),
             // Cannot handle if the buffers are full
             Err(UsbError::WouldBlock) => panic!("Buffers full"),
             // Return all other errors

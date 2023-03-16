@@ -17,10 +17,10 @@ mod app {
     use stm32f4xx_hal as hal;
     use usb_device::{bus::UsbBusAllocator, prelude::*};
 
-    #[cfg(feature = "LEADER")]
-    use plc::Leader as PlcDriver;
     #[cfg(feature = "FOLLOWER")]
     use plc::Follower as PlcDriver;
+    #[cfg(feature = "LEADER")]
+    use plc::Leader as PlcDriver;
     use tunnel_firmware::{dbg, mem, plc, st7580, usb, util};
 
     #[shared]

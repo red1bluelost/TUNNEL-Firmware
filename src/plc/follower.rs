@@ -41,7 +41,10 @@ impl Follower {
         match self.state {
             State::Wait => {
                 let Some(f) = self.driver.receive_frame() else { return };
-                assert!(matches!(f.command, st7580::STX_03 | st7580::STX_02));
+                debug_assert!(matches!(
+                    f.command,
+                    st7580::STX_03 | st7580::STX_02
+                ));
                 let header = f.data[HEADER_IDX].try_into().unwrap();
                 match header {
                     Header::Idle => panic!("Unexpected Idle from leader"),

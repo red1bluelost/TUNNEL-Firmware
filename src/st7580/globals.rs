@@ -26,7 +26,7 @@ pub(super) static mut T_REQ_PIN: Option<PA5<Output<PushPull>>> = None;
 
 static mut NOW: Option<fn() -> Instant<u32, 1, 1000000>> = None;
 pub(super) fn set_now_fn(now: fn() -> Instant<u32, 1, 1000000>) {
-    assert!(unsafe { NOW.is_none() });
+    debug_assert!(unsafe { NOW.is_none() });
     unsafe { NOW.replace(now) };
 }
 pub(super) fn now() -> u32 {

@@ -62,7 +62,7 @@ impl Driver {
     }
 
     pub fn mib_write(&mut self, idx: u8, buf: &[u8]) -> StResult<DSTag> {
-        assert!(buf.len() < 255);
+        debug_assert!(buf.len() < 255);
         let mut data = mem::alloc().unwrap();
         data.push(idx).unwrap();
         data.extend_from_slice(buf).unwrap();
@@ -114,7 +114,7 @@ impl Driver {
     /// * `buf` - buffer containing ping test data to be sent. If ping is
     ///   success ST7580 PLC Modem will reply with the same data.
     pub fn ping(&mut self, buf: mem::BufBox) -> StResult<DSTag> {
-        assert!(buf.len() < 255);
+        debug_assert!(buf.len() < 255);
         let data = mem::alloc_from_slice(&buf).unwrap();
         let tx_frame = Frame::new(STX_02, data.len() as u8, CMD_PING_REQ, data);
 
@@ -182,7 +182,7 @@ impl Driver {
         enc_len: u8,
     ) -> StResult<()> {
         let data_len = send_buf.len();
-        assert_eq!(data_len, clr_len as usize + enc_len as usize);
+        debug_assert_eq!(data_len, clr_len as usize + enc_len as usize);
         if (data_len > SS_DATALEN_MAX)
             || (enc_len == 0 && clr_len < 16)
             || (enc_len > 0 && data_len < 4)
@@ -265,8 +265,8 @@ impl DSender {
     }
 
     pub fn enqueue(&mut self, tag: DSTag) -> StResult<&mut Self> {
-        assert!(!self.is_active());
-        assert!(matches!(self.sf_state, TxStatus::TxreqLow));
+        debug_assert!(!self.is_active());
+        debug_assert!(matches!(self.sf_state, TxStatus::TxreqLow));
         let DSTag(frame, tag) = tag;
         self.tx_frame_queue
             .enqueue(frame)

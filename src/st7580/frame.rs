@@ -31,7 +31,7 @@ impl Clone for Frame {
 
 impl Frame {
     pub fn new(stx: u8, length: u8, command: u8, data: BufBox) -> Self {
-        assert!(data.len() == length as _);
+        debug_assert!(data.len() == length as _);
         let checksum = Self::calc_checksum(command, length, &data);
         Self {
             stx,
@@ -43,7 +43,7 @@ impl Frame {
     }
 
     pub fn calc_checksum(command: u8, length: u8, data: &[u8]) -> u16 {
-        assert_eq!(length as usize, data.len());
+        debug_assert_eq!(length as usize, data.len());
         data.iter().fold(
             u16::wrapping_add(command.into(), length.into()),
             |acc, &val| u16::wrapping_add(acc, val.into()),

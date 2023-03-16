@@ -145,10 +145,8 @@ impl InterruptHandler {
         serial: &mut Serial1<(PA9<Alternate<7>>, PA10<Alternate<7>>), u8>,
     ) {
         if let Some(ack_tx) = self.ack_tx_value {
-            assert!(
-                matches!(self.tx_state, TxIrqStatus::SendStx)
-                    && matches!(self.tx_cur_idx, 0)
-            );
+            debug_assert!(matches!(self.tx_state, TxIrqStatus::SendStx));
+            debug_assert(matches!(self.tx_cur_idx, 0));
             serial.write(ack_tx.to_ack()).unwrap();
             serial.unlisten(Event::Txe);
             self.ack_tx_value = None;

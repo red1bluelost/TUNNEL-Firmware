@@ -102,7 +102,11 @@ mod app {
         let usb_device =
             UsbDeviceBuilder::new(usb_bus, UsbVidPid(0x0000, 0x6969))
                 .manufacturer("TUNNEL Team")
-                .product("TUNNEL Device")
+                .product(if cfg!(feature = "LEADER") {
+                    "TUNNEL Leader"
+                } else {
+                    "TUNNEL Follower"
+                })
                 .serial_number("deadbeef")
                 .self_powered(true)
                 .build();

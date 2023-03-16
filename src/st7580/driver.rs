@@ -54,6 +54,12 @@ impl Driver {
         }
     }
 
+    pub fn set_ready_to_receive(&mut self) {
+        unsafe {
+            globals::READY_TO_RECEIVE = true;
+        }
+    }
+
     pub fn reset(&mut self) -> StResult<DSTag> {
         let tx_frame =
             Frame::new(STX_02, 0, CMD_RESET_REQ, mem::alloc().unwrap());

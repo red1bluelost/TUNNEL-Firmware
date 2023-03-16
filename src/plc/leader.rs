@@ -55,7 +55,7 @@ impl Leader {
                     }
                     None => {
                         self.state = State::SendPing;
-                        mem::alloc_from_slice(&[Header::Idle.into()]).unwrap()
+                        mem::alloc_from_slice(&[Header::Ping.into()]).unwrap()
                     }
                 };
                 let tag = self.driver.dl_data(DATA_OPT, send_buf).unwrap();
@@ -85,10 +85,7 @@ impl Leader {
             }
             State::WaitPing => {
                 let Some(f) = self.driver.receive_frame() else { return };
-                debug_assert!(matches!(
-                    f.command,
-                    st7580::STX_03 | st7580::STX_02
-                ));
+                debug_assert!(matches!(f.stx, st7580::STX_03 | st7580::STX_02));
                 let header = f.data[HEADER_IDX].try_into().unwrap();
                 match header {
                     Header::Ping => panic!("Unexpected Ping from follower"),

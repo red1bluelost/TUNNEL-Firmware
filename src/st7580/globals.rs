@@ -40,3 +40,5 @@ pub(super) static LOCAL_FRAME_TX: Signal = Signal::new();
 pub(super) static WAIT_ACK: Signal = Signal::new();
 pub(super) static WAIT_STATUS: Signal = Signal::new();
 pub(super) static TX_ACTIVE: Signal = Signal::new();
+
+pub(super) static mut READY_TO_RECEIVE: bool = false;

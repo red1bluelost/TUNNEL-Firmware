@@ -123,9 +123,13 @@ impl InterruptHandler {
                     Some(self.rx_frame.checksum == self.rx_cksum);
 
                 if self.rx_frame.command.is_indication() {
-                    self.ind_frame_queue
-                        .enqueue(self.rx_frame.clone())
-                        .unwrap();
+                    if matches!(self.rx_frame.command, CMD_RESET_IND)
+                        || unsafe { globals::READY_TO_RECEIVE }
+                    {
+                        self.ind_frame_queue
+                            .enqueue(self.rx_frame.clone())
+                            .unwrap();
+                    }
                 } else {
                     self.cnf_frame_queue
                         .enqueue(self.rx_frame.clone())
@@ -146,7 +150,7 @@ impl InterruptHandler {
     ) {
         if let Some(ack_tx) = self.ack_tx_value {
             debug_assert!(matches!(self.tx_state, TxIrqStatus::SendStx));
-            debug_assert(matches!(self.tx_cur_idx, 0));
+            debug_assert!(matches!(self.tx_cur_idx, 0));
             serial.write(ack_tx.to_ack()).unwrap();
             serial.unlisten(Event::Txe);
             self.ack_tx_value = None;

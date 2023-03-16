@@ -142,6 +142,7 @@ mod app {
                 .and_then(|d| nb::block!(d.process()))
                 .unwrap();
             delay.delay(500.millis());
+            driver.set_ready_to_receive();
 
             dbg::println!("P2P Communication Test - Leader Board Side");
             dbg::println!();

@@ -97,9 +97,8 @@ mod app {
             SerialPort::new_with_store(usb_bus, util::zeros(), util::zeros());
         let usb_dev = UsbDeviceBuilder::new(usb_bus, UsbVidPid(0x0000, 0x6969))
             .manufacturer("TUNNEL Team")
-            .product("TUNNEL Device")
+            .product("TUNNEL Testing")
             .serial_number("deadbeef")
-            .device_class(0xff)
             .self_powered(true)
             .build();
 

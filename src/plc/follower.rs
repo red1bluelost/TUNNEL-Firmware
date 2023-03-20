@@ -75,6 +75,14 @@ impl Follower {
             State::Send => match self.sender.process() {
                 Ok(()) => self.state = State::Wait,
                 Err(st7580::NbStErr::WouldBlock) => {}
+                Err(st7580::NbStErr::Other(st7580::StErr::TxErrNoStatus)) => {
+                    crate::dbg::println!("plm did not return status");
+                    self.state = State::Wait;
+                }
+                Err(st7580::NbStErr::Other(st7580::StErr::TxErrAckTmo)) => {
+                    crate::dbg::println!("plm ack timed out");
+                    self.state = State::Wait;
+                }
                 Err(st7580::NbStErr::Other(e)) => {
                     panic!("Ping processing error: {:?}", e)
                 }

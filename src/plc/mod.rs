@@ -1,5 +1,5 @@
 use crate::{st7580, usb};
-use stm32f4xx_hal::timer::{self, DelayUs, ExtU32};
+use stm32f4xx_hal::timer::{self, DelayUs};
 
 pub mod follower;
 pub mod leader;
@@ -58,13 +58,11 @@ fn shared_init<TIM: timer::Instance>(
         .and_then(|tag| sender.enqueue(tag))
         .and_then(|d| nb::block!(d.process()))
         .unwrap();
-    delay.delay(500.millis());
 
     driver
         .mib_write(st7580::MIB_PHY_CONF, &st7580::PHY_CONFIG)
         .and_then(|tag| sender.enqueue(tag))
         .and_then(|d| nb::block!(d.process()))
         .unwrap();
-    delay.delay(500.millis());
     driver.set_ready_to_receive();
 }

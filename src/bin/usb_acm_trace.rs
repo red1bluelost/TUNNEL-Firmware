@@ -13,6 +13,7 @@ use usbd_serial::{Result, SerialPort};
 )]
 mod app {
     use super::SerialPortTrace;
+    use fugit::Instant;
     use hal::otg_fs::{UsbBus, UsbBusType, USB};
     use hal::{pac, prelude::*, timer};
     use stm32f4xx_hal as hal;
@@ -28,6 +29,7 @@ mod app {
     struct Local {
         usb_dev: UsbDevice<'static, UsbBusType>,
         usb_comm: SerialPortTrace,
+        last_time: Instant<u32, 1, 1000000>,
     }
 
     #[monotonic(binds = TIM2, default = true)]
@@ -76,10 +78,16 @@ mod app {
             .self_powered(true)
             .build();
 
+        let last_time = monotonics::now();
+
         dbg::println!("init end");
         (
             Shared {},
-            Local { usb_dev, usb_comm },
+            Local {
+                usb_dev,
+                usb_comm,
+                last_time,
+            },
             init::Monotonics(mono),
         )
     }
@@ -90,6 +98,7 @@ mod app {
         local = [
             usb_dev,
             usb_comm,
+            last_time,
             buffer: [u8; 1 << 12] = util::zeros(),
             counter: u64 = 0,
         ]
@@ -98,12 +107,13 @@ mod app {
         let usb::LocalResources {
             usb_dev,
             usb_comm,
+            last_time,
             buffer,
             counter,
         } = ctx.local;
 
         if !usb_dev.poll(&mut [usb_comm]) {
-            // return;
+            return;
         }
 
         match usb_comm.read(buffer) {
@@ -123,6 +133,12 @@ mod app {
 
         #[cfg(any())]
         {
+            let now = monotonics::now();
+            if now < *last_time + 1.secs() {
+                return;
+            }
+            *last_time = now;
+
             let tmp = "yeet".as_bytes();
             buffer[..tmp.len()].clone_from_slice(tmp);
             match usb_comm.write(&buffer[..tmp.len()]) {

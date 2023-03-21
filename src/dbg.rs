@@ -56,4 +56,4 @@ pub fn dump_buffer(buffer: &[u8]) {
     }
 }
 
-pub use {init, println};
+pub use {init, print, println};

@@ -7,6 +7,7 @@
     dispatchers = [SPI1, SPI2, SPI3]
 )]
 mod app {
+    use fugit::Instant;
     use hal::otg_fs::{UsbBus, UsbBusType, USB};
     use hal::{
         pac,
@@ -28,12 +29,13 @@ mod app {
 
     #[local]
     struct Local {
-        usb_dev: UsbDevice<'static, UsbBusType>,
-        usb_comm: SerialPort<'static, UsbBusType, UsbBuf, UsbBuf>,
         delay: DelayUs<pac::TIM3>,
         st7580_interrupt_handler: st7580::InterruptHandler,
         st7580_driver: st7580::Driver,
         st7580_dsender: st7580::DSender,
+        usb_dev: UsbDevice<'static, UsbBusType>,
+        usb_comm: SerialPort<'static, UsbBusType, UsbBuf, UsbBuf>,
+        last_time: Instant<u32, 1, 1000000>,
     }
 
     #[monotonic(binds = TIM2, default = true)]
@@ -104,12 +106,15 @@ mod app {
 
         plm::spawn().unwrap();
 
+        let last_time = monotonics::now();
+
         dbg::println!("init end");
         (
             Shared {},
             Local {
                 usb_dev,
                 usb_comm,
+                last_time,
                 delay,
                 st7580_interrupt_handler,
                 st7580_driver,
@@ -119,13 +124,23 @@ mod app {
         )
     }
 
-    #[task(binds = OTG_FS, priority = 2, local = [usb_dev, usb_comm])]
-    fn usb(ctx: usb::Context) {
-        let usb::LocalResources { usb_dev, usb_comm } = ctx.local;
+    #[task(binds = OTG_FS, priority = 2, local = [usb_dev, usb_comm, last_time])]
+    fn otg_fs(ctx: otg_fs::Context) {
+        let otg_fs::LocalResources {
+            usb_dev,
+            usb_comm,
+            last_time,
+        } = ctx.local;
 
         if !usb_dev.poll(&mut [usb_comm]) {
             return;
         }
+
+        let now = monotonics::now();
+        if now < *last_time + 1.secs() {
+            return;
+        }
+        *last_time = now;
 
         const DATA: &[u8] = "test string\n".as_bytes();
         match usb_comm.write(DATA) {

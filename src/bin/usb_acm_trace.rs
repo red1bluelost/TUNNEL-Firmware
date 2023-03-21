@@ -182,32 +182,32 @@ impl UsbClass<UsbBusType> for SerialPortTrace {
     }
 
     fn endpoint_setup(&mut self, addr: EndpointAddress) {
-        // dbg::println!("Endpoint setup for {:?}", addr);
+        dbg::println!("Endpoint setup for {:?}", addr);
         self.0.endpoint_setup(addr)
     }
 
     fn endpoint_out(&mut self, addr: EndpointAddress) {
-        // dbg::println!("Endpoint out for {:?}", addr);
+        dbg::println!("Endpoint out for {:?}", addr);
         self.0.endpoint_out(addr)
     }
 
     fn endpoint_in_complete(&mut self, addr: EndpointAddress) {
-        // dbg::println!("Endpoint in complete for {:?}", addr);
+        dbg::println!("Endpoint in complete for {:?}", addr);
         self.0.endpoint_in_complete(addr)
     }
 
     fn get_string(&self, index: StringIndex, lang_id: u16) -> Option<&str> {
-        // dbg::println!("Get String for {:?} {:?}", u8::from(index), lang_id);
+        dbg::println!("Get String for {:?} {:?}", u8::from(index), lang_id);
         self.0.get_string(index, lang_id)
     }
 
     fn poll(&mut self) {
-        // dbg::println!("poll");
+        dbg::println!("acm poll");
         self.0.poll()
     }
 
     fn reset(&mut self) {
-        // dbg::println!("USB Reset");
+        dbg::println!("USB Reset");
         self.0.reset()
     }
 }

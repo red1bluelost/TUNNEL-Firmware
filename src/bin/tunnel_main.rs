@@ -40,7 +40,7 @@ mod app {
 
     #[init(
         local = [
-            stbuf: [u8; 1 << 12] = util::zeros(),
+            stbuf: [u8; 1 << 13] = util::zeros(),
             ep_memory: [u32; 1024] = util::zeros(),
             usb_bus: Option<UsbBusAllocator<UsbBusType>> = None,
         ]

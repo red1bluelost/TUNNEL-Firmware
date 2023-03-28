@@ -16,6 +16,7 @@ pub struct Leader {
     sender: st7580::DSender,
     channels: Channels,
     ping_timeout: st7580::Timeout,
+    fail_timeout: st7580::Timeout,
 }
 
 impl Leader {
@@ -25,6 +26,8 @@ impl Leader {
         in_producer: usb::UsbProducer,
         out_consumer: usb::UsbConsumer,
     ) -> Self {
+        let mut fail_timeout = st7580::Timeout::default();
+        fail_timeout.set(1);
         Self {
             state: State::Dispatch,
             driver,
@@ -34,6 +37,7 @@ impl Leader {
                 out_consumer,
             },
             ping_timeout: Default::default(),
+            fail_timeout,
         }
     }
 
@@ -43,6 +47,9 @@ impl Leader {
 
     pub fn process(&mut self) {
         match self.state {
+            State::Dispatch if !self.fail_timeout.is_expired() => {
+                // Wait for the plm to get back
+            }
             State::Dispatch => {
                 let receive_opt = self.channels.out_consumer.dequeue();
 
@@ -58,12 +65,20 @@ impl Leader {
                         mem::alloc_from_slice(&[Header::Ping.into()]).unwrap()
                     }
                 };
-                let tag = self.driver.dl_data(DATA_OPT, send_buf).unwrap();
-                self.sender.enqueue(tag).unwrap();
+
+                if let Err(e) = self
+                    .driver
+                    .dl_data(DATA_OPT, send_buf)
+                    .and_then(|tag| self.sender.enqueue(tag))
+                {
+                    crate::dbg::println!("data error {:?}", e);
+                    self.fail_timeout.set(100);
+                    self.state = State::Dispatch;
+                }
             }
             State::SendPing | State::SendData => match self.sender.process() {
                 Ok(()) if self.state == State::SendPing => {
-                    self.ping_timeout.set(100);
+                    self.ping_timeout.set(500);
                     self.state = State::WaitPing;
                 }
                 Ok(()) => self.state = State::Dispatch,
@@ -74,6 +89,10 @@ impl Leader {
                 }
                 Err(st7580::NbStErr::Other(st7580::StErr::TxErrAckTmo)) => {
                     crate::dbg::println!("plm ack timed out");
+                    self.state = State::Dispatch;
+                }
+                Err(st7580::NbStErr::Other(st7580::StErr::TxErrBusy)) => {
+                    crate::dbg::println!("plm tx busy");
                     self.state = State::Dispatch;
                 }
                 Err(st7580::NbStErr::Other(e)) => {

@@ -9,7 +9,7 @@ use usbd_serial::{Result, SerialPort, UsbError};
 
 type UsbBuf = [u8; 512];
 
-pub const QUEUE_SIZE: usize = 8;
+pub const QUEUE_SIZE: usize = 32;
 pub type Elem = mem::BufBox;
 type UsbQueue = Queue<Elem, QUEUE_SIZE>;
 pub type UsbProducer = Producer<'static, Elem, QUEUE_SIZE>;
@@ -44,9 +44,9 @@ impl UsbManager {
                 let mut sending =
                     self.current_read.exchange(mem::alloc().unwrap());
                 sending.truncate(len);
-                self.out_producer
-                    .enqueue(sending)
-                    .expect("The out going message queue is full");
+                if let Err(_e) = self.out_producer.enqueue(sending) {
+                    crate::dbg::println!("The out going message queue is full");
+                };
             }
             // No new data so continue
             Err(UsbError::WouldBlock) => {}
@@ -66,6 +66,7 @@ impl UsbManager {
             // Return all other errors
             Err(e) => return Err(e),
         }
+        self.serial.flush().unwrap();
 
         Ok(())
     }

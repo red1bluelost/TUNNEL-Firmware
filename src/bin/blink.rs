@@ -7,7 +7,6 @@
     dispatchers = [SPI1, SPI2, SPI3]
 )]
 mod app {
-    use hal::otg_fs::{UsbBus, UsbBusType, USB};
     use hal::{
         gpio::{Output, PA5},
         pac,

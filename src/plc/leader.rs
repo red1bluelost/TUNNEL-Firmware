@@ -10,7 +10,7 @@ enum State {
     WaitPing,
 }
 
-pub struct Leader {
+pub struct Leader<const TWO_WAY: bool> {
     state: State,
     driver: st7580::Driver,
     sender: st7580::DSender,
@@ -19,7 +19,7 @@ pub struct Leader {
     fail_timeout: st7580::Timeout,
 }
 
-impl Leader {
+impl<const TWO_WAY: bool> Leader<TWO_WAY> {
     pub fn new(
         driver: st7580::Driver,
         sender: st7580::DSender,
@@ -60,10 +60,11 @@ impl Leader {
                         send_buf.rotate_right(1);
                         send_buf
                     }
-                    None => {
+                    None if TWO_WAY => {
                         self.state = State::SendPing;
                         mem::alloc_from_slice(&[Header::Ping.into()]).unwrap()
                     }
+                    None => return,
                 };
 
                 if let Err(e) = self

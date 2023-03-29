@@ -8,14 +8,14 @@ enum State {
     Send,
 }
 
-pub struct Follower {
+pub struct Follower<const TWO_WAY: bool> {
     state: State,
     driver: st7580::Driver,
     sender: st7580::DSender,
     channels: Channels,
 }
 
-impl Follower {
+impl<const TWO_WAY: bool> Follower<TWO_WAY> {
     pub fn new(
         driver: st7580::Driver,
         sender: st7580::DSender,
@@ -52,7 +52,7 @@ impl Follower {
                         data.truncate(len - DATA_START);
                         self.channels.in_producer.enqueue(data).unwrap();
                     }
-                    Header::Ping => {
+                    Header::Ping if TWO_WAY => {
                         let receive_opt = self.channels.out_consumer.dequeue();
                         let send_buf = match receive_opt {
                             Some(mut send_buf) => {
@@ -65,11 +65,17 @@ impl Follower {
                                     .unwrap()
                             }
                         };
-                        let tag =
-                            self.driver.dl_data(DATA_OPT, send_buf).unwrap();
-                        self.sender.enqueue(tag).unwrap();
+                        if let Err(e) = self
+                            .driver
+                            .dl_data(DATA_OPT, send_buf)
+                            .and_then(|tag| self.sender.enqueue(tag))
+                        {
+                            crate::dbg::println!("data error {:?}", e);
+                            self.state = State::Wait;
+                        }
                         self.state = State::Send;
                     }
+                    Header::Ping => {}
                 }
             }
             State::Send => match self.sender.process() {

@@ -35,7 +35,7 @@ mod app {
         usb_manager: usb::UsbManager,
         st7580_interrupt_handler: st7580::InterruptHandler,
         delay: DelayUs<pac::TIM3>,
-        driver: PlcDriver,
+        driver: PlcDriver<false>,
         null_consumer:
             NullQueueConsumer<'static, mem::BufBox, { usb::QUEUE_SIZE }>,
     }
@@ -109,11 +109,7 @@ mod app {
         let usb_device =
             UsbDeviceBuilder::new(usb_bus, UsbVidPid(0x0000, 0x6969))
                 .manufacturer("TUNNEL Team")
-                .product(if cfg!(feature = "LEADER") {
-                    "TUNNEL Leader"
-                } else {
-                    "TUNNEL Follower"
-                })
+                .product("TUNNEL Receiver")
                 .serial_number("deadbeef")
                 .self_powered(true)
                 .build();

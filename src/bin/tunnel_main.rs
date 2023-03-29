@@ -26,13 +26,15 @@ mod app {
     #[shared]
     struct Shared {}
 
+    const TWO_WAY: bool = cfg!(feature = "TWO_WAY");
+
     #[local]
     struct Local {
         usb_device: UsbDevice<'static, UsbBusType>,
         usb_manager: usb::UsbManager,
         st7580_interrupt_handler: st7580::InterruptHandler,
         delay: DelayUs<pac::TIM3>,
-        driver: PlcDriver,
+        driver: PlcDriver<TWO_WAY>,
     }
 
     #[monotonic(binds = TIM2, default = true)]

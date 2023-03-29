@@ -35,7 +35,7 @@ pub fn dump_buffer(buffer: &[u8]) {
             if bit_idx % 2 == 0 {
                 print!(" ");
             }
-            match cnk.iter().nth(bit_idx) {
+            match cnk.get(bit_idx) {
                 Some(&e) => {
                     print!("{:02x}", e);
                 }

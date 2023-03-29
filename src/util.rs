@@ -1,3 +1,5 @@
+use heapless::spsc::Consumer;
+
 pub trait Exchange {
     fn exchange(&mut self, val: Self) -> Self;
 }
@@ -34,4 +36,18 @@ zero_impl!(isize);
 
 pub const fn zeros<T: Zero + Copy, const N: usize>() -> [T; N] {
     [T::ZERO; N]
+}
+
+pub struct NullQueueConsumer<'a, T, const N: usize> {
+    consumer: Consumer<'a, T, N>,
+}
+
+impl<'a, T, const N: usize> NullQueueConsumer<'a, T, N> {
+    pub fn new(consumer: Consumer<'a, T, N>) -> Self {
+        Self { consumer }
+    }
+
+    pub fn poll(&mut self) {
+        self.consumer.dequeue();
+    }
 }

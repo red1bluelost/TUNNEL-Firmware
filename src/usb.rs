@@ -11,7 +11,7 @@ type UsbBuf = [u8; 512];
 
 pub const QUEUE_SIZE: usize = 32;
 pub type Elem = mem::BufBox;
-type UsbQueue = Queue<Elem, QUEUE_SIZE>;
+pub type UsbQueue = Queue<Elem, QUEUE_SIZE>;
 pub type UsbProducer = Producer<'static, Elem, QUEUE_SIZE>;
 pub type UsbConsumer = Consumer<'static, Elem, QUEUE_SIZE>;
 static mut IN_QUEUE: UsbQueue = Queue::new();
@@ -44,6 +44,10 @@ impl UsbManager {
                 let mut sending =
                     self.current_read.exchange(mem::alloc().unwrap());
                 sending.truncate(len);
+
+                crate::dbg::println!("JUST READ");
+                crate::dbg::dump_buffer(&sending);
+
                 if let Err(_e) = self.out_producer.enqueue(sending) {
                     crate::dbg::println!("The out going message queue is full");
                 };
@@ -57,6 +61,9 @@ impl UsbManager {
         // Dequeue next write or return
         let Some(current_write) = self.in_consumer.dequeue() else { return Ok(()) };
 
+        crate::dbg::println!("ATTEMPTING WRITE");
+        crate::dbg::dump_buffer(&current_write);
+
         // Write the data to host
         match self.serial.write(&current_write) {
             // Currently relying on everything being sent
@@ -66,7 +73,6 @@ impl UsbManager {
             // Return all other errors
             Err(e) => return Err(e),
         }
-        self.serial.flush().unwrap();
 
         Ok(())
     }

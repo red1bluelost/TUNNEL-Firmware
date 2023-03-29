@@ -21,9 +21,9 @@ enum Header {
     Ping = 0x02,
 }
 
-impl Into<u8> for Header {
-    fn into(self) -> u8 {
-        self as u8
+impl From<Header> for u8 {
+    fn from(val: Header) -> Self {
+        val as u8
     }
 }
 

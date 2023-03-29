@@ -116,6 +116,28 @@ mod app {
             return;
         }
 
+        #[cfg(all())]
+        {
+            let now = monotonics::now();
+            if now > *last_time + 100.millis() {
+                *last_time = now;
+
+                let tmp = "yeet\n".as_bytes();
+                buffer[..tmp.len()].clone_from_slice(tmp);
+                match usb_comm.write(&buffer[..tmp.len()]) {
+                    Ok(count) => {
+                        dbg::println!("wrote {} bytes", count);
+                        dbg::dump_buffer(&buffer[..count]);
+                        dbg::println!("dump over\n");
+                    }
+                    Err(usbd_serial::UsbError::WouldBlock) => {}
+                    Err(err) => {
+                        dbg::println!("USB write failed: {:?}", err);
+                    }
+                }
+            }
+        }
+
         match usb_comm.read(buffer) {
             Ok(count) => {
                 dbg::println!("received {} bytes", count);
@@ -128,29 +150,6 @@ mod app {
             }
             Err(err) => {
                 dbg::println!("USB read failed: {:?}", err);
-            }
-        }
-
-        #[cfg(any())]
-        {
-            let now = monotonics::now();
-            if now < *last_time + 1.secs() {
-                return;
-            }
-            *last_time = now;
-
-            let tmp = "yeet".as_bytes();
-            buffer[..tmp.len()].clone_from_slice(tmp);
-            match usb_comm.write(&buffer[..tmp.len()]) {
-                Ok(count) => {
-                    dbg::println!("wrote {} bytes", count);
-                    dbg::dump_buffer(&buffer[..count]);
-                    dbg::println!("dump over\n");
-                }
-                Err(usbd_serial::UsbError::WouldBlock) => {}
-                Err(err) => {
-                    dbg::println!("USB write failed: {:?}", err);
-                }
             }
         }
     }

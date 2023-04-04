@@ -22,6 +22,7 @@ mod app {
 
     #[shared]
     struct Shared {
+        #[lock_free]
         clocks: rcc::Clocks,
         tim3: Option<TIM3>,
     }
@@ -116,10 +117,10 @@ mod app {
             last_id_rcv,
             iter_cntr,
         } = ctx.local;
-        let plm::SharedResources { clocks, tim3 } = ctx.shared;
+        let plm::SharedResources { clocks, mut tim3 } = ctx.shared;
 
         let mut delay =
-            (clocks, tim3).lock(|c, t| t.exchange(None).unwrap().delay_us(c));
+            tim3.lock(|t| t.exchange(None).unwrap().delay_us(clocks));
 
         // We must perform the initialization stage here due to the `init`
         // task being interrupt free.
@@ -195,6 +196,10 @@ mod app {
                 None if try_cnt == 10 => {
                     // No ACK Msg received until timeout
                     dbg::println!("ACK Timeout - No ACK Received");
+                    
+                    let tim = delay.release().release();
+                    tim3.lock(|t| t.replace(tim));
+
                     plm::spawn().unwrap();
                     return;
                 }
@@ -232,6 +237,9 @@ mod app {
             core::str::from_utf8_unchecked(rcv_buffer)
         });
         dbg::println!();
+
+        let tim = delay.release().release();
+        tim3.lock(|t| t.replace(tim));
 
         plm::spawn_after(1.secs()).unwrap();
     }

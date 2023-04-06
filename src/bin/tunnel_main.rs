@@ -42,7 +42,7 @@ mod app {
 
     #[init(
         local = [
-            stbuf: [u8; 1 << 13] = util::zeros(),
+            stbuf: [u8; 1 << 14] = util::zeros(),
             ep_memory: [u32; 1024] = util::zeros(),
             usb_bus: Option<UsbBusAllocator<UsbBusType>> = None,
         ]
@@ -60,7 +60,11 @@ mod app {
         let dp = ctx.device;
 
         let rcc = dp.RCC.constrain();
-        let clocks = rcc.cfgr.use_hse(8.MHz()).sysclk(96.MHz()).freeze();
+        let clocks = rcc
+            .cfgr
+            .use_hse(8.MHz())
+            .sysclk(tunnel_firmware::CLOCK_SPEED.MHz())
+            .freeze();
 
         let mono = dp.TIM2.monotonic_us(&clocks);
 

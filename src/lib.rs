@@ -13,3 +13,8 @@ pub mod plc;
 pub mod st7580;
 pub mod usb;
 pub mod util;
+
+#[cfg(feature = "F446")]
+pub const CLOCK_SPEED: u32 = 144;
+#[cfg(feature = "F411")]
+pub const CLOCK_SPEED: u32 = 96;

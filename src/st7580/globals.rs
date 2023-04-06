@@ -11,7 +11,7 @@ use stm32f4xx_hal as hal;
 
 use super::{signal::Signal, *};
 
-pub(super) const QUEUE_SIZE: usize = 8;
+pub(super) const QUEUE_SIZE: usize = 32;
 pub(super) static mut FRAME_QUEUE: Queue<Frame, QUEUE_SIZE> = Queue::new();
 pub(super) type FrameConsumer<const SIZE: usize> =
     Consumer<'static, Frame, SIZE>;

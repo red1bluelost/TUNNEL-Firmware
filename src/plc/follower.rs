@@ -75,8 +75,11 @@ impl<const TWO_WAY: bool> Follower<TWO_WAY> {
                         }
                         self.state = State::Send;
                     }
-                    Header::Ping => {}
+                    Header::Ping => panic!("Recieved ping during one-way mode"),
                 }
+            }
+            State::Send if !TWO_WAY => {
+                panic!("Reached send during one-way mode")
             }
             State::Send => match self.sender.process() {
                 Ok(()) => self.state = State::Wait,

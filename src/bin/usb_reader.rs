@@ -45,7 +45,11 @@ mod app {
         let dp = ctx.device;
 
         let rcc = dp.RCC.constrain();
-        let clocks = rcc.cfgr.use_hse(8.MHz()).sysclk(96.MHz()).freeze();
+        let clocks = rcc
+            .cfgr
+            .use_hse(8.MHz())
+            .sysclk(tunnel_firmware::CLOCK_SPEED.MHz())
+            .freeze();
 
         let mono = dp.TIM2.monotonic_us(&clocks);
 

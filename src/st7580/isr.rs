@@ -119,10 +119,13 @@ impl InterruptHandler {
             RxIrqStatus::ChecksumMsb => {
                 self.rx_frame.checksum |= (c as u16) << 8;
 
-                self.ack_tx_value =
-                    Some(self.rx_frame.checksum == self.rx_cksum);
+                let valid_cksum = self.rx_frame.checksum == self.rx_cksum;
 
-                if self.rx_frame.command.is_indication() {
+                self.ack_tx_value = Some(valid_cksum);
+
+                if !valid_cksum {
+                    crate::dbg::println!("Invalid cksum {:?}", &self.rx_frame);
+                } else if self.rx_frame.command.is_indication() {
                     if matches!(self.rx_frame.command, CMD_RESET_IND)
                         || unsafe { globals::READY_TO_RECEIVE }
                     {

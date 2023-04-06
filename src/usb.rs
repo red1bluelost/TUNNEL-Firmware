@@ -40,18 +40,16 @@ impl UsbManager {
             // Assuming won't occurs since it would result in WouldBlock instead
             Ok(0) => unreachable!(),
             // Hand off the data to the queue
-            Ok(len) => {
+            Ok(len) if cfg!(any(feature = "TWO_WAY", feature = "LEADER")) => {
                 let mut sending =
                     self.current_read.exchange(mem::alloc().unwrap());
                 sending.truncate(len);
-
-                crate::dbg::println!("JUST READ");
-                crate::dbg::dump_buffer(&sending);
 
                 if let Err(_e) = self.out_producer.enqueue(sending) {
                     crate::dbg::println!("The out going message queue is full");
                 };
             }
+            Ok(_) => {}
             // No new data so continue
             Err(UsbError::WouldBlock) => {}
             // Return all other errors

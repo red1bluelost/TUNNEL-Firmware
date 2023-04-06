@@ -51,7 +51,11 @@ mod app {
         let dp = ctx.device;
 
         let rcc = dp.RCC.constrain();
-        let clocks = rcc.cfgr.use_hse(8.MHz()).sysclk(96.MHz()).freeze();
+        let clocks = rcc
+            .cfgr
+            .use_hse(8.MHz())
+            .sysclk(tunnel_firmware::CLOCK_SPEED.MHz())
+            .freeze();
 
         let mono = dp.TIM2.monotonic_us(&clocks);
 
@@ -119,7 +123,8 @@ mod app {
         } = ctx.local;
         let plm::SharedResources { clocks, mut tim3 } = ctx.shared;
 
-        let mut delay = tim3.lock(|t| t.exchange(None).unwrap().delay_us(clocks));
+        let mut delay =
+            tim3.lock(|t| t.exchange(None).unwrap().delay_us(clocks));
 
         // We must perform the initialization stage here due to the `init`
         // task being interrupt free.

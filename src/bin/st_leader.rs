@@ -51,7 +51,11 @@ mod app {
         let dp = ctx.device;
 
         let rcc = dp.RCC.constrain();
-        let clocks = rcc.cfgr.use_hse(8.MHz()).sysclk(96.MHz()).freeze();
+        let clocks = rcc
+            .cfgr
+            .use_hse(8.MHz())
+            .sysclk(tunnel_firmware::CLOCK_SPEED.MHz())
+            .freeze();
 
         let mono = dp.TIM2.monotonic_us(&clocks);
 
@@ -196,7 +200,7 @@ mod app {
                 None if try_cnt == 10 => {
                     // No ACK Msg received until timeout
                     dbg::println!("ACK Timeout - No ACK Received");
-                    
+
                     let tim = delay.release().release();
                     tim3.lock(|t| t.replace(tim));
 

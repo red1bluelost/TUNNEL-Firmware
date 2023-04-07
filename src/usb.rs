@@ -1,13 +1,8 @@
-use crate::{
-    mem,
-    util::{self, Exchange},
-};
+use crate::{mem, util::Exchange};
 use heapless::spsc::{Consumer, Producer, Queue};
 use stm32f4xx_hal::otg_fs::UsbBusType;
 use usb_device::{bus::UsbBusAllocator, class::UsbClass};
-use usbd_serial::{Result, SerialPort, UsbError};
-
-type UsbBuf = [u8; 512];
+use usbd_serial::{CdcAcmClass, Result, UsbError};
 
 pub const QUEUE_SIZE: usize = 32;
 pub type Elem = mem::BufBox;
@@ -18,7 +13,7 @@ static mut IN_QUEUE: UsbQueue = Queue::new();
 static mut OUT_QUEUE: UsbQueue = Queue::new();
 
 pub struct UsbManager {
-    serial: SerialPort<'static, UsbBusType, UsbBuf, UsbBuf>,
+    serial: CdcAcmClass<'static, UsbBusType>,
     in_consumer: UsbConsumer,
     out_producer: UsbProducer,
     current_read: mem::BufBox,
@@ -36,7 +31,7 @@ impl UsbManager {
             self.current_read.resize(capacity, 0).unwrap();
         }
         // Attempt read from host
-        match self.serial.read(&mut self.current_read) {
+        match self.serial.read_packet(&mut self.current_read) {
             // Assuming won't occurs since it would result in WouldBlock instead
             Ok(0) => unreachable!(),
             // Hand off the data to the queue
@@ -59,13 +54,14 @@ impl UsbManager {
         // Dequeue next write or return
         let Some(current_write) = self.in_consumer.dequeue() else { return Ok(()) };
 
-
         // Write the data to host
-        match self.serial.write(&current_write) {
+        match self.serial.write_packet(&current_write) {
             // Currently relying on everything being sent
             Ok(len) => debug_assert_eq!(len, current_write.len()),
             // Cannot handle if the buffers are full
-            Err(UsbError::WouldBlock) => panic!("Buffers full"),
+            Err(UsbError::WouldBlock) => {
+                crate::dbg::println!("usb IN buffer is full");
+            }
             // Return all other errors
             Err(e) => return Err(e),
         }
@@ -83,8 +79,7 @@ pub struct UsbSplit {
 pub fn split(alloc: &'static UsbBusAllocator<UsbBusType>) -> UsbSplit {
     cortex_m::singleton!(:bool = false).expect("May only call split once");
 
-    let serial =
-        SerialPort::new_with_store(alloc, util::zeros(), util::zeros());
+    let serial = CdcAcmClass::new(alloc, 64);
 
     let (in_producer, in_consumer) = unsafe { IN_QUEUE.split() };
     let (out_producer, out_consumer) = unsafe { OUT_QUEUE.split() };

@@ -42,6 +42,10 @@ impl<const TWO_WAY: bool> Follower<TWO_WAY> {
             State::Wait => {
                 let Some(f) = self.driver.receive_frame() else { return };
                 debug_assert!(matches!(f.stx, st7580::STX_03 | st7580::STX_02));
+                if f.length == 0 {
+                    crate::dbg::println!("received zero size packet {:?}", f);
+                    return;
+                }
                 let header = f.data[HEADER_IDX].try_into().unwrap();
                 match header {
                     Header::Idle => panic!("Unexpected Idle from leader"),

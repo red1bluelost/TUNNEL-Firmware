@@ -59,8 +59,6 @@ impl UsbManager {
         // Dequeue next write or return
         let Some(current_write) = self.in_consumer.dequeue() else { return Ok(()) };
 
-        crate::dbg::println!("ATTEMPTING WRITE");
-        crate::dbg::dump_buffer(&current_write);
 
         // Write the data to host
         match self.serial.write(&current_write) {

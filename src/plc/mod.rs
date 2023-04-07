@@ -8,7 +8,7 @@ pub use follower::Follower;
 pub use leader::Leader;
 
 const PLM_SPACE_USED: usize = 4 + if cfg!(feature = "GAIN_SELECTOR") {
-    1
+    0 // This may need to be 1
 } else {
     0
 };
@@ -16,7 +16,7 @@ const HEADER_IDX: usize = PLM_SPACE_USED;
 const DATA_START: usize = HEADER_IDX + 1;
 
 /// 0 -
-const DATA_OPT: u8 = 0b0_010_0_1_0_0;
+const DATA_OPT: u8 = 0b0_010_1_1_0_0;
 
 enum Header {
     Idle = 0x00,

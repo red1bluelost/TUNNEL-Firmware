@@ -166,11 +166,11 @@ impl Driver {
 
         #[cfg(feature = "CUSTOM_MIB_FREQUENCY")]
         for val in TXFREQS {
-            data.push(val);
+            data.push(val).unwrap();
         }
 
         #[cfg(feature = "GAIN_SELECTOR")]
-        data.push(TXGAIN);
+        data.push(TXGAIN).unwrap();
 
         data.extend_from_slice(&send_buf).unwrap();
 

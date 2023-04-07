@@ -2,7 +2,7 @@
 pub const TXFREQS: [u8; 3] = [0, 0, 0];
 
 #[cfg(feature = "GAIN_SELECTOR")]
-pub const TXGAIN: u8 = 0;
+pub const TXGAIN: u8 = 0x1F;
 
 /// ST7580 PHY configuration parameters fitting
 pub const PHY_CONFIG: [u8; 14] = [

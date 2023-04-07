@@ -77,7 +77,8 @@ impl<const TWO_WAY: bool> Follower<TWO_WAY> {
                         };
                         if let Err(e) = self
                             .driver
-                            .phy_data(DATA_OPT, send_buf)
+                            // .phy_data(DATA_OPT, send_buf)
+                            .dl_data(DATA_OPT, send_buf)
                             .and_then(|tag| self.sender.enqueue(tag))
                         {
                             crate::dbg::println!("data error {:?}", e);

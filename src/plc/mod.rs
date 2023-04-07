@@ -7,7 +7,11 @@ pub mod leader;
 pub use follower::Follower;
 pub use leader::Leader;
 
-const PLM_SPACE_USED: usize = 4;
+const PLM_SPACE_USED: usize = 4 + if cfg!(feature = "GAIN_SELECTOR") {
+    1
+} else {
+    0
+};
 const HEADER_IDX: usize = PLM_SPACE_USED;
 const DATA_START: usize = HEADER_IDX + 1;
 

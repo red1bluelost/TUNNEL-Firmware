@@ -54,7 +54,13 @@ impl<const TWO_WAY: bool> Follower<TWO_WAY> {
                         let mut data = f.data;
                         data.copy_within(DATA_START..len, 0);
                         data.truncate(len - DATA_START);
-                        self.channels.in_producer.enqueue(data).unwrap();
+                        if let Err(_data) =
+                            self.channels.in_producer.enqueue(data)
+                        {
+                            crate::dbg::println!(
+                                "IN Producer is full, packet dropped"
+                            );
+                        }
                     }
                     Header::Ping if TWO_WAY => {
                         let receive_opt = self.channels.out_consumer.dequeue();
@@ -71,7 +77,7 @@ impl<const TWO_WAY: bool> Follower<TWO_WAY> {
                         };
                         if let Err(e) = self
                             .driver
-                            .dl_data(DATA_OPT, send_buf)
+                            .phy_data(DATA_OPT, send_buf)
                             .and_then(|tag| self.sender.enqueue(tag))
                         {
                             crate::dbg::println!("data error {:?}", e);

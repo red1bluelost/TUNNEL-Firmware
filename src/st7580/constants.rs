@@ -12,10 +12,10 @@ pub const PHY_CONFIG: [u8; 14] = [
 
 /// ST7580 MODEM configuration parameters fitting
 /// Use PHY data
-#[cfg(any())]
+#[cfg(all())]
 pub const MODEM_CONFIG: [u8; 1] = [0x00];
 /// Use DL data
-#[cfg(all())]
+#[cfg(any())]
 pub const MODEM_CONFIG: [u8; 1] = [0x11];
 
 /// MIBs Objects

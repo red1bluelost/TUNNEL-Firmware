@@ -69,7 +69,7 @@ impl<const TWO_WAY: bool> Leader<TWO_WAY> {
 
                 if let Err(e) = self
                     .driver
-                    .dl_data(DATA_OPT, send_buf)
+                    .phy_data(DATA_OPT, send_buf)
                     .and_then(|tag| self.sender.enqueue(tag))
                 {
                     crate::dbg::println!("data error {:?}", e);
@@ -94,6 +94,10 @@ impl<const TWO_WAY: bool> Leader<TWO_WAY> {
                 }
                 Err(st7580::NbStErr::Other(st7580::StErr::TxErrBusy)) => {
                     crate::dbg::println!("plm tx busy");
+                    self.state = State::Dispatch;
+                }
+                Err(st7580::NbStErr::Other(st7580::StErr::TxErrNak)) => {
+                    crate::dbg::println!("plm tx NAK");
                     self.state = State::Dispatch;
                 }
                 Err(st7580::NbStErr::Other(e)) => {

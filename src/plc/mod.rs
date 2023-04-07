@@ -11,9 +11,8 @@ const PLM_SPACE_USED: usize = 4;
 const HEADER_IDX: usize = PLM_SPACE_USED;
 const DATA_START: usize = HEADER_IDX + 1;
 
-/// TODO: This is a magic number that is a bit more complicated if using
-/// CUSTOM_MIB_FREQUENCY or GAIN_SELECTOR
-const DATA_OPT: u8 = 0x44;
+/// 0 -
+const DATA_OPT: u8 = 0b0_010_0_1_0_0;
 
 enum Header {
     Idle = 0x00,
